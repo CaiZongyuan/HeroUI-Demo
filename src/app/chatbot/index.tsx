@@ -1,13 +1,28 @@
-// src\app\(home)\chatbot
 import { generateAPIUrl } from "@/src/utils/expoUrl";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { fetch as expoFetch } from "expo/fetch";
-import { useState } from "react";
-import { SafeAreaView, ScrollView, Text, TextInput, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 export default function App() {
   const [input, setInput] = useState("");
+  const scrollViewRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
+
   const { messages, error, sendMessage } = useChat({
     transport: new DefaultChatTransport({
       fetch: expoFetch as unknown as typeof globalThis.fetch,
@@ -16,56 +31,88 @@ export default function App() {
     onError: (error) => console.error(error, "ERROR"),
   });
 
+  useEffect(() => {
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }, [messages]);
+
   if (error) return <Text>{error.message}</Text>;
 
   return (
-    <SafeAreaView style={{ height: "100%" }}>
-      <View
-        style={{
-          height: "95%",
-          display: "flex",
-          flexDirection: "column",
-          paddingHorizontal: 8,
-        }}
+    <SafeAreaView style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        <ScrollView style={{ flex: 1 }}>
-          {messages.map((m) => (
-            <View key={m.id} style={{ marginVertical: 8 }}>
-              <View>
-                <Text style={{ fontWeight: 700 }}>{m.role}</Text>
-                {m.parts.map((part, i) => {
-                  switch (part.type) {
-                    case "text":
-                      return <Text key={`${m.id}-${i}`}>{part.text}</Text>;
-                    case "tool-weather":
-                    case "tool-convertFahrenheitToCelsius":
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View className="flex-1">
+            <ScrollView
+              ref={scrollViewRef}
+              contentContainerStyle={{
+                paddingBottom: 20,
+                paddingHorizontal: 8,
+              }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              onContentSizeChange={() =>
+                scrollViewRef.current?.scrollToEnd({ animated: true })
+              }
+            >
+              {messages.map((m) => (
+                <View key={m.id} style={{ marginVertical: 12 }}>
+                  <Text style={{ fontWeight: "bold", marginBottom: 4 }}>
+                    {m.role === "user" ? "You" : "Assistant"}
+                  </Text>
+                  {m.parts.map((part, i) => {
+                    if (part.type === "text") {
                       return (
-                        <Text key={`${m.id}-${i}`}>
-                          {JSON.stringify(part, null, 2)}
+                        <Text key={i} style={{ lineHeight: 20 }}>
+                          {part.text}
                         </Text>
                       );
+                    }
+                    return (
+                      <Text key={i} style={{ color: "gray", fontSize: 12 }}>
+                        [Tool Result] {JSON.stringify(part)}
+                      </Text>
+                    );
+                  })}
+                </View>
+              ))}
+            </ScrollView>
+            <View
+              style={{
+                paddingHorizontal: 12,
+                paddingTop: 12,
+                paddingBottom: insets.bottom - 12,
+                backgroundColor: "#fff",
+                borderTopWidth: 1,
+                borderTopColor: "#eee",
+              }}
+            >
+              <TextInput
+                style={{
+                  backgroundColor: "#f5f5f5",
+                  borderRadius: 20,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  fontSize: 16,
+                }}
+                placeholder="Say something..."
+                value={input}
+                onChangeText={setInput}
+                onSubmitEditing={() => {
+                  if (input.trim()) {
+                    sendMessage({ text: input });
+                    setInput("");
                   }
-                })}
-              </View>
+                }}
+                returnKeyType="send"
+                blurOnSubmit={false}
+              />
             </View>
-          ))}
-        </ScrollView>
-
-        <View style={{ marginTop: 8 }}>
-          <TextInput
-            style={{ backgroundColor: "white", padding: 8 }}
-            placeholder="Say something..."
-            value={input}
-            onChange={(e) => setInput(e.nativeEvent.text)}
-            onSubmitEditing={(e) => {
-              e.preventDefault();
-              sendMessage({ text: input });
-              setInput("");
-            }}
-            autoFocus={true}
-          />
-        </View>
-      </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
