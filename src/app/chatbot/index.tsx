@@ -5,6 +5,7 @@ import { fetch as expoFetch } from "expo/fetch";
 import { useEffect, useRef, useState } from "react";
 import { Text, TextInput, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
+import { MessageRenderer } from "@/src/components/MessageRenderer";
 export default function App() {
   const [input, setInput] = useState("");
   const scrollViewRef = useRef<ScrollView>(null);
@@ -38,22 +39,26 @@ export default function App() {
         showsVerticalScrollIndicator={false}
       >
         {messages.map((m) => (
-          <View key={m.id} style={{ marginVertical: 12 }}>
-            <Text style={{ fontWeight: "bold", marginBottom: 4 }}>
-              {m.role === "user" ? "You" : "Assistant"}
-            </Text>
+          <View key={m.id}>
             {m.parts.map((part, i) => {
               if (part.type === "text") {
                 return (
-                  <Text key={i} style={{ lineHeight: 20 }}>
-                    {part.text}
-                  </Text>
+                  <MessageRenderer
+                    key={i}
+                    role={m.role as "user" | "assistant"}
+                    content={part.text}
+                  />
                 );
               }
               return (
-                <Text key={i} style={{ color: "gray", fontSize: 12 }}>
-                  [Tool Result] {JSON.stringify(part)}
-                </Text>
+                <View key={i} style={{ marginVertical: 12 }}>
+                  <Text style={{ fontWeight: "bold", marginBottom: 4 }}>
+                    {m.role === "user" ? "You" : "Assistant"}
+                  </Text>
+                  <Text style={{ color: "gray", fontSize: 12 }}>
+                    [Tool Result] {JSON.stringify(part)}
+                  </Text>
+                </View>
               );
             })}
           </View>
