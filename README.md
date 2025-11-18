@@ -148,13 +148,6 @@ bun run reset-project       # Reset to blank project
 ## 📖 Learn More
 
 - [Expo documentation](https://docs.expo.dev/)
-- [HeroUI Native documentation](https://heroui-native.com/)
 - [React Native documentation](https://reactnative.dev/)
 - [TanStack Query documentation](https://tanstack.com/query/latest)
 - [Drizzle ORM documentation](https://orm.drizzle.team/)
-
-## 🆘 Support
-
-- [Expo Discord](https://chat.expo.dev) - Community support
-- [HeroUI Native GitHub](https://github.com/geekyanton/heroui-native) - Component issues
-- Project issues - Use GitHub Issues for bug reports and feature requests

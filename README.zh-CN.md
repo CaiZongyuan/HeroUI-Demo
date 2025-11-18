@@ -148,13 +148,6 @@ bun run reset-project       # 重置为空白项目
 ## 📖 了解更多
 
 - [Expo 文档](https://docs.expo.dev/)
-- [HeroUI Native 文档](https://heroui-native.com/)
 - [React Native 文档](https://reactnative.dev/)
 - [TanStack Query 文档](https://tanstack.com/query/latest)
 - [Drizzle ORM 文档](https://orm.drizzle.team/)
-
-## 🆘 支持
-
-- [Expo Discord](https://chat.expo.dev) - 社区支持
-- [HeroUI Native GitHub](https://github.com/geekyanton/heroui-native) - 组件问题
-- 项目问题 - 使用 GitHub Issues 报告错误和功能请求
