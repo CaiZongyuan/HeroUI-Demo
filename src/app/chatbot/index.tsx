@@ -34,11 +34,21 @@ export default function App() {
           .orderBy(asc(chatMessages.createdAt));
 
         setInitialMessages(
-          history.map((msg) => ({
-            id: msg.id,
-            role: msg.role,
-            parts: [{ type: "text", text: msg.content }],
-          }))
+          history
+            .map((msg) => {
+              try {
+                // Parse the stored JSON message
+                const parsedMessage = JSON.parse(msg.message as string);
+                return {
+                  ...parsedMessage,
+                  id: msg.id, // Ensure we use the DB ID if needed, or keep the one from JSON
+                };
+              } catch (e) {
+                console.warn("Failed to parse message JSON:", msg.message);
+                return null;
+              }
+            })
+            .filter((msg) => msg !== null)
         );
       } catch (e) {
         console.error("Failed to load history", e);
@@ -50,6 +60,12 @@ export default function App() {
     loadHistory();
   }, [currentSessionId]);
 
+  const currentSessionIdRef = useRef(currentSessionId);
+
+  useEffect(() => {
+    currentSessionIdRef.current = currentSessionId;
+  }, [currentSessionId]);
+
   const { messages, error, sendMessage, setMessages } = useChat({
     transport: new DefaultChatTransport({
       fetch: expoFetch as unknown as typeof globalThis.fetch,
@@ -57,22 +73,25 @@ export default function App() {
     }),
     onError: (error) => console.error(error, "ERROR"),
     onFinish: async ({ message }) => {
-      if (!currentSessionId) return;
+      const sessionId = currentSessionIdRef.current;
+      console.log("onFinish triggered, sessionId:", sessionId);
+      
+      if (!sessionId) {
+        console.log("No current session ID in onFinish");
+        return;
+      }
       
       // Save assistant message
       try {
-        const content = message.parts
-          .filter((part) => part.type === "text")
-          .map((part) => part.text)
-          .join("");
+        console.log("Saving assistant message for session:", sessionId);
 
         await db.insert(chatMessages).values({
           id: message.id,
-          sessionId: currentSessionId,
-          role: "assistant",
-          content: content,
+          sessionId: sessionId,
+          message: JSON.stringify(message),
           createdAt: new Date(),
         });
+        console.log("Assistant message saved");
       } catch (e) {
         console.error("Failed to save assistant message", e);
       }
@@ -97,13 +116,18 @@ export default function App() {
 
     // Optimistically add user message is handled by useChat, but we need to save it
     const messageId = Math.random().toString(36).substring(7);
+    const userMessage = {
+      id: messageId,
+      role: "user",
+      content: userMessageContent,
+      createdAt: new Date(),
+    };
 
     try {
       await db.insert(chatMessages).values({
         id: messageId,
         sessionId: currentSessionId,
-        role: "user",
-        content: userMessageContent,
+        message: JSON.stringify(userMessage),
         createdAt: new Date(),
       });
       
@@ -141,27 +165,34 @@ export default function App() {
           >
             {messages.map((m) => (
               <View key={m.id}>
-                {m.parts.map((part, i) => {
-                  if (part.type === "text") {
+                {m.parts ? (
+                  m.parts.map((part, i) => {
+                    if (part.type === "text") {
+                      return (
+                        <MessageRenderer
+                          key={i}
+                          role={m.role as "user" | "assistant"}
+                          content={part.text}
+                        />
+                      );
+                    }
                     return (
-                      <MessageRenderer
-                        key={i}
-                        role={m.role as "user" | "assistant"}
-                        content={part.text}
-                      />
+                      <View key={i} style={{ marginVertical: 12 }}>
+                        <Text style={{ fontWeight: "bold", marginBottom: 4 }}>
+                          {m.role === "user" ? "You" : "Assistant"}
+                        </Text>
+                        <Text style={{ color: "gray", fontSize: 12 }}>
+                          [Tool Result] {JSON.stringify(part)}
+                        </Text>
+                      </View>
                     );
-                  }
-                  return (
-                    <View key={i} style={{ marginVertical: 12 }}>
-                      <Text style={{ fontWeight: "bold", marginBottom: 4 }}>
-                        {m.role === "user" ? "You" : "Assistant"}
-                      </Text>
-                      <Text style={{ color: "gray", fontSize: 12 }}>
-                        [Tool Result] {JSON.stringify(part)}
-                      </Text>
-                    </View>
-                  );
-                })}
+                  })
+                ) : (
+                  <MessageRenderer
+                    role={m.role as "user" | "assistant"}
+                    content={m.content}
+                  />
+                )}
               </View>
             ))}
           </ScrollView>

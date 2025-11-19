@@ -1,4 +1,3 @@
-// app/api/chat+api.ts
 import {
     convertToModelMessages,
     stepCountIs,

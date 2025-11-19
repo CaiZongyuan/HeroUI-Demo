@@ -5,7 +5,7 @@ import {
   DrawerItemList,
 } from "@react-navigation/drawer";
 import { DrawerActions } from "@react-navigation/native";
-import { desc } from "drizzle-orm";
+import { desc, eq, isNull } from "drizzle-orm";
 import { useMigrations } from "drizzle-orm/expo-sqlite/migrator";
 import { useDrizzleStudio } from "expo-drizzle-studio-plugin";
 import { Drawer } from "expo-router/drawer";
@@ -35,6 +35,7 @@ export default function ChatbotLayout() {
         const result = await db
           .select()
           .from(chatSessions)
+          .where(isNull(chatSessions.deletedAt))
           .orderBy(desc(chatSessions.createdAt));
         setSessions(result);
         
@@ -56,6 +57,7 @@ export default function ChatbotLayout() {
       id: newId,
       title: `New Chat ${new Date().toLocaleTimeString()}`,
       createdAt: new Date(),
+      deletedAt: null,
     };
 
     try {
@@ -64,6 +66,23 @@ export default function ChatbotLayout() {
       setCurrentSessionId(newId);
     } catch (e) {
       console.error("Failed to create session", e);
+    }
+  };
+
+  const deleteSession = async (id: string) => {
+    try {
+      await db
+        .update(chatSessions)
+        .set({ deletedAt: new Date() })
+        .where(eq(chatSessions.id, id));
+      
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      
+      if (currentSessionId === id) {
+        setCurrentSessionId(null);
+      }
+    } catch (e) {
+      console.error("Failed to delete session", e);
     }
   };
 
@@ -110,15 +129,23 @@ export default function ChatbotLayout() {
           <DrawerContentScrollView {...props}>
             <DrawerItemList {...props} />
             {sessions.map((session) => (
-              <DrawerItem
-                key={session.id}
-                label={session.title}
-                focused={session.id === currentSessionId}
-                onPress={() => {
-                  setCurrentSessionId(session.id);
-                  props.navigation.dispatch(DrawerActions.closeDrawer());
-                }}
-              />
+              <View key={session.id} style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 10 }}>
+                <DrawerItem
+                  label={session.title}
+                  focused={session.id === currentSessionId}
+                  onPress={() => {
+                    setCurrentSessionId(session.id);
+                    props.navigation.dispatch(DrawerActions.closeDrawer());
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <TouchableOpacity 
+                  onPress={() => deleteSession(session.id)}
+                  style={{ padding: 8 }}
+                >
+                  <Ionicons name="trash-outline" size={20} color="red" />
+                </TouchableOpacity>
+              </View>
             ))}
           </DrawerContentScrollView>
         )}
