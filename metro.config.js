@@ -1,9 +1,10 @@
-const { getDefaultConfig } = require('expo/metro-config');
-const { withUniwindConfig } = require('uniwind/metro'); 
+const { getDefaultConfig } = require('expo/metro-config')
+const { withUniwindConfig } = require('uniwind/metro');
 
 const config = getDefaultConfig(__dirname);
 
 // your metro modifications
+config.resolver.sourceExts.push('sql');
 
 module.exports = withUniwindConfig(config, {  
   // relative path to your global.css file (from previous step)
