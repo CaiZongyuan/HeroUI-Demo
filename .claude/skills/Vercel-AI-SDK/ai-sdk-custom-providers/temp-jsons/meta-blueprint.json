@@ -1,0 +1,82 @@
+{
+  "skill_name": "ai-sdk-custom-providers",
+  "skill_description": "This skill should be used when users need to create custom AI providers or integrate OpenAI-compatible providers with the Vercel AI SDK. It provides comprehensive guidance on implementing the Language Model Specification V2, setting up providers from scratch, or leveraging existing OpenAI-compatible APIs for quick integration.",
+  "output_directory": "ai-sdk-custom-providers/",
+  "modules": {
+    "custom-provider": {
+      "source_docs": ["Writing-a-Custom-Provider.md"],
+      "focus": "Complete custom provider development from scratch",
+      "apis": ["ProviderV2", "LanguageModelV2", "doGenerate", "doStream", "LanguageModelV2Content", "LanguageModelV2Prompt"]
+    },
+    "openai-compatible": {
+      "source_docs": ["OpenAI-Compatible-Providers.md"],
+      "focus": "Quick integration with existing OpenAI-compatible providers",
+      "apis": ["createOpenAICompatible", "generateText", "MetadataExtractor", "chatModel"]
+    }
+  },
+  "routing_logic": [
+    {
+      "pattern": ["create custom provider", "implement from scratch", "V2 specification", "LanguageModelV2", "provider development"],
+      "route_to": "custom-provider",
+      "priority": "high"
+    },
+    {
+      "pattern": ["OpenAI compatible", "quick setup", "existing provider", "createOpenAICompatible", "fast integration"],
+      "route_to": "openai-compatible",
+      "priority": "high"
+    },
+    {
+      "pattern": ["which approach", "compare", "choose provider", "when to use", "decision"],
+      "route_to": "both",
+      "priority": "medium"
+    },
+    {
+      "pattern": ["streaming", "tool calling", "error handling", "provider options"],
+      "route_to": "both",
+      "priority": "medium"
+    }
+  ],
+  "progressive_disclosure": {
+    "level1_metadata": {
+      "word_limit": 100,
+      "include_description": true,
+      "include_core_principles": true
+    },
+    "level2_skill_md": {
+      "word_limit": 5000,
+      "include_workflows": true,
+      "include_decision_guidance": true,
+      "include_common_patterns": true
+    },
+    "level3_references": {
+      "include_original_docs": true,
+      "reference_directory": "references/",
+      "auto_load_condition": "detailed_implementation_needed"
+    }
+  },
+  "skill_structure": {
+    "main_file": "SKILL.md",
+    "references_directory": "references/",
+    "original_docs": [
+      "Writing-a-Custom-Provider.md",
+      "OpenAI-Compatible-Providers.md"
+    ]
+  },
+  "key_workflows": [
+    {
+      "name": "Choose Implementation Approach",
+      "description": "Helps users decide between custom provider vs OpenAI-compatible",
+      "steps": ["assess_requirements", "evaluate_complexity", "recommend_approach"]
+    },
+    {
+      "name": "Implement Custom Provider",
+      "description": "Step-by-step guide for creating providers from scratch",
+      "steps": ["setup_provider", "implement_language_model", "add_streaming", "handle_errors"]
+    },
+    {
+      "name": "Setup OpenAI-Compatible Provider",
+      "description": "Quick integration with existing providers",
+      "steps": ["install_package", "configure_provider", "test_integration"]
+    }
+  ]
+}

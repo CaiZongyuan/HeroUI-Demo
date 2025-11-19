@@ -1,0 +1,525 @@
+{
+  "skill_name": "ai-sdk-ui",
+  "total_files_analyzed": 13,
+  "empty_files": 1,
+  "analysis_summary": "AI SDK UI documentation analysis covering React hooks, streaming protocols, chat interfaces, and advanced AI UI patterns",
+  "files": [
+    {
+      "file_name": "Completion.md",
+      "summary": "This document provides a comprehensive guide on using the useCompletion hook from the @ai-sdk/react package to create streaming text completion interfaces. It covers basic setup, API integration, UI customization, error handling, and advanced features like throttling and cancellation.",
+      "toc": [
+        "Example",
+        "Customized UI",
+        "Loading and error states",
+        "Controlled input",
+        "Cancelation",
+        "Throttling UI Updates",
+        "Event Callbacks",
+        "Configure Request Options"
+      ],
+      "key_apis": [
+        "useCompletion",
+        "streamText",
+        "handleInputChange",
+        "handleSubmit",
+        "setInput",
+        "stop",
+        "toUIMessageStreamResponse"
+      ],
+      "code_examples": [
+        "Basic useCompletion hook implementation with form and API route",
+        "Loading and error state management with UI feedback",
+        "Controlled input pattern with custom components",
+        "Response cancellation using stop function",
+        "Throttling UI updates with experimental_throttle option",
+        "Event callback configuration for response lifecycle handling",
+        "Custom request configuration with headers and body fields"
+      ],
+      "main_workflows": [
+        "Setting up streaming text completion with useCompletion hook and API route",
+        "Managing UI states (loading, error, completion) during streaming",
+        "Implementing controlled input patterns for custom form validation",
+        "Handling completion cancellation and resource management",
+        "Configuring request options for authentication and additional data"
+      ]
+    },
+    {
+      "file_name": "Streaming-Custom-Data.md",
+      "summary": "This document explains how to stream custom data alongside model responses in the AI SDK. It covers type-safe data streaming setup, server-side streaming implementation, different types of streamable data (persistent data parts, sources, and transient data), data part reconciliation for dynamic updates, client-side data processing, and various use cases like RAG applications and real-time status updates.",
+      "toc": [
+        "Setting Up Type-Safe Data Streaming",
+        "Streaming Data from the Server",
+        "Types of Streamable Data",
+        "Data Part Reconciliation",
+        "Processing Data on the Client",
+        "Use Cases",
+        "Message Metadata vs Data Parts"
+      ],
+      "key_apis": [
+        "createUIMessageStream",
+        "createUIMessageStreamResponse",
+        "pipeUIMessageStreamToResponse",
+        "streamText",
+        "convertToModelMessages",
+        "useChat",
+        "UIMessage",
+        "writer.write",
+        "writer.merge"
+      ],
+      "code_examples": [
+        "Type definition for custom UI message with data part schemas",
+        "Server-side route handler streaming weather data with loading states",
+        "Data parts streaming with reconciliation using same ID",
+        "Sources streaming for RAG use cases",
+        "Transient data parts for notifications",
+        "Client-side useChat with onData callback handling",
+        "Message rendering with filtered data parts",
+        "Complete chat component example with weather updates"
+      ],
+      "main_workflows": [
+        "Setup: Define custom UI message type with data schemas for type safety",
+        "Server streaming: Create UIMessageStream, write data parts, merge with AI response",
+        "Data reconciliation: Use same ID to update existing parts dynamically",
+        "Client processing: Handle streaming data via onData callback and render from message.parts",
+        "Different data types: Persistent data parts (in history), sources (for RAG), transient parts (ephemeral)",
+        "Message metadata vs data parts: Choose appropriate method based on use case"
+      ]
+    },
+    {
+      "file_name": "Object-Generation.md",
+      "summary": "A comprehensive guide on using the useObject hook to create interfaces that represent structured JSON objects being streamed in real-time. The document covers basic usage with schema definitions, enum output mode for classification tasks, UI customization for loading/error states, event callbacks, and request configuration options.",
+      "toc": ["Example", "Enum Output Mode", "Customized UI", "Event Callbacks", "Configure Request Options"],
+      "key_apis": ["useObject", "experimental_useObject", "streamObject", "z.object", "z.enum", "z.string", "z.array"],
+      "code_examples": [
+        "Schema definition using Zod for notifications with name and message fields",
+        "Client-side React component using useObject hook to stream and display partial notification data",
+        "Server-side API route using streamObject to generate structured notifications",
+        "Text classification example using enum output mode with true/false categorization",
+        "Loading state implementation with spinner and disabled button",
+        "Stop functionality to cancel object generation process",
+        "Error state handling with generic error message display",
+        "Event callbacks using onFinish and onError for lifecycle management",
+        "Request configuration with custom headers and credentials"
+      ],
+      "main_workflows": [
+        "Basic object generation workflow: Define schema → Set up client with useObject → Create server endpoint with streamObject → Handle partial results in UI",
+        "Classification workflow: Use enum output mode → Define enum schema → Stream classification results → Display categorized output",
+        "UI state management workflow: Track loading/error states → Provide user feedback → Enable stop functionality → Handle completion and errors",
+        "Event-driven workflow: Register callbacks → Handle object completion → Process validation errors → Manage request failures",
+        "Configuration workflow: Set custom API endpoints → Configure authentication headers → Set credential policies"
+      ]
+    },
+    {
+      "file_name": "Reading-UI-Message-Streams.md",
+      "summary": "The document provides a comprehensive guide on using the `readUIMessageStream` helper function for processing streaming UI messages. It covers basic usage for simple text streaming, tool calls integration, and resuming conversations from previous message states. The guide includes practical code examples and is suitable for developers implementing streaming message processing in applications like Terminal UIs, React Server Components (RSC), and custom stream processing.",
+      "toc": [
+        "Basic Usage",
+        "Tool Calls",
+        "Resuming Conversations"
+      ],
+      "key_apis": [
+        "readUIMessageStream",
+        "streamText",
+        "UIMessageStream",
+        "convertToModelMessages",
+        "createDataUIMessage",
+        "tool"
+      ],
+      "code_examples": [
+        "Basic text streaming implementation using readUIMessageStream with streamText",
+        "Tool calls integration showing real-time tool input streaming and response generation",
+        "Resuming conversations from previous message states with model message conversion"
+      ],
+      "main_workflows": [
+        "Text streaming workflow for real-time message display",
+        "Tool calls workflow with input streaming and response handling",
+        "Conversation resumption workflow from previous message states"
+      ]
+    },
+    {
+      "file_name": "Generative-User-Interfaces.md",
+      "summary": "The file exists but is empty (0 bytes). No content available for analysis.",
+      "toc": [],
+      "key_apis": [],
+      "code_examples": [],
+      "main_workflows": [],
+      "status": "empty_file",
+      "file_size_bytes": 0
+    },
+    {
+      "file_name": "Chatbot-Resume-Streams.md",
+      "summary": "This document provides a comprehensive guide on implementing stream resumption functionality for chatbot applications using the AI SDK's `useChat` hook. It covers how to build applications with long-running generations that can survive page reloads by using persistent storage (Redis) and resumable stream technology. The guide explains the complete architecture including client-side setup, server-side API endpoints (POST for creating streams, GET for resuming them), and important considerations around abort functionality limitations.",
+      "toc": [
+        "How stream resumption works",
+        "Prerequisites",
+        "Implementation",
+        "How it works",
+        "Customize the resume endpoint",
+        "Important considerations"
+      ],
+      "key_apis": [
+        "useChat hook",
+        "DefaultChatTransport",
+        "consumeSseStream callback",
+        "streamText function",
+        "createResumableStreamContext",
+        "generateId",
+        "after function",
+        "resumeExistingStream",
+        "UI_MESSAGE_STREAM_HEADERS"
+      ],
+      "code_examples": [
+        "Client-side Chat component with resume option enabled in useChat hook",
+        "POST handler for creating resumable streams using consumeSseStream callback",
+        "GET handler for resuming existing streams via /api/chat/[id]/stream endpoint",
+        "Customizable DefaultChatTransport with prepareReconnectToStreamRequest option"
+      ],
+      "main_workflows": [
+        "Stream creation workflow: POST handler creates resumable stream with unique ID and stores in Redis",
+        "Stream persistence workflow: Active stream ID tracked in database/chat storage layer",
+        "Client reconnection workflow: GET request on mount to check and resume active streams",
+        "Stream recovery workflow: Using resumeExistingStream to reconnect to active streams",
+        "Completion cleanup workflow: Clearing activeStreamId when stream finishes"
+      ]
+    },
+    {
+      "file_name": "Chatbot.md",
+      "summary": "Comprehensive documentation for the useChat hook from AI SDK UI, which enables creating conversational user interfaces with real-time message streaming. The guide covers basic setup, state management, error handling, custom configurations, advanced features like tool calling, attachments, and specialized content types including reasoning tokens, sources, and image generation.",
+      "toc": [
+        "Example",
+        "Customized UI",
+        "Status",
+        "Error State",
+        "Modify messages",
+        "Cancellation and regeneration",
+        "Throttling UI Updates",
+        "Event Callbacks",
+        "Request Configuration",
+        "Custom headers, body, and credentials",
+        "Hook-Level Configuration",
+        "Dynamic Hook-Level Configuration",
+        "Request-Level Configuration",
+        "Setting custom body fields per request",
+        "Message Metadata",
+        "Transport Configuration",
+        "Advanced: Trigger-based routing",
+        "Controlling the response stream",
+        "Error Messages",
+        "Usage Information",
+        "Text Streams",
+        "Reasoning",
+        "Sources",
+        "Image Generation",
+        "Attachments",
+        "FileList",
+        "File Objects",
+        "Type Inference for Tools",
+        "InferUITool",
+        "InferUITools",
+        "Using Inferred Types"
+      ],
+      "key_apis": [
+        "useChat hook",
+        "DefaultChatTransport",
+        "TextStreamChatTransport",
+        "streamText",
+        "convertToModelMessages",
+        "UIMessage",
+        "toUIMessageStreamResponse",
+        "InferUITool",
+        "InferUITools",
+        "sendMessage",
+        "setMessages",
+        "stop",
+        "regenerate",
+        "reload"
+      ],
+      "code_examples": [
+        "Basic chatbot implementation with useChat hook and server-side streaming",
+        "Status management example showing loading states and stop functionality",
+        "Error handling with reload functionality",
+        "Message modification and deletion using setMessages",
+        "Stop and regenerate button implementations",
+        "Throttling UI updates with experimental_throttle option",
+        "Event callbacks for onFinish, onError, and onData",
+        "Custom headers and body configuration at hook and request levels",
+        "Message metadata attachment for usage tracking",
+        "Custom transport with prepareSendMessagesRequest",
+        "Trigger-based routing for message regeneration",
+        "Error message customization with getErrorMessage",
+        "Usage information tracking with LanguageModelUsage",
+        "Text stream protocol configuration",
+        "Reasoning tokens forwarding for compatible models",
+        "Sources display for Perplexity and Google Generative AI",
+        "Image generation rendering with file parts",
+        "File attachments using FileList and File objects",
+        "Type inference for tools with InferUITool and InferUITools"
+      ],
+      "main_workflows": [
+        "Real-time chat message streaming between client and server",
+        "Chat state management with automatic UI updates",
+        "Error handling and recovery mechanisms",
+        "Message manipulation (delete, modify, regenerate)",
+        "File attachment handling for multi-modal conversations",
+        "Custom transport configuration for different API patterns",
+        "Tool calling integration with type safety",
+        "Advanced content handling (reasoning, sources, images)",
+        "Usage tracking and metadata management",
+        "Custom request configuration with headers and body parameters"
+      ]
+    },
+    {
+      "file_name": "Message-Metadata.md",
+      "summary": "This document explains how to use message metadata in AI applications to attach custom information at the message level. It covers the difference between message metadata and data parts, provides TypeScript implementation examples for type-safe metadata handling, demonstrates server-side metadata transmission using toUIMessageStreamResponse, and shows client-side access patterns. The guide includes practical examples for tracking timestamps, model information, token usage, and other message-level data.",
+      "toc": ["Overview", "Getting Started", "Common Use Cases", "See Also"],
+      "key_apis": ["UIMessage", "toUIMessageStreamResponse", "messageMetadata callback", "useChat hook", "streamText", "convertToModelMessages"],
+      "code_examples": [
+        "Defining TypeScript metadata schema with Zod for type safety",
+        "Server-side metadata transmission using messageMetadata callback in toUIMessageStreamResponse",
+        "Client-side metadata access through message.metadata property in React components",
+        "Conditional rendering of metadata like timestamps and token counts"
+      ],
+      "main_workflows": [
+        "Define metadata schema using Zod and create typed UIMessage interface",
+        "Use messageMetadata callback to send metadata at different streaming stages (start/finish)",
+        "Access and display metadata on client side through message.metadata property",
+        "Track various message-level data including timestamps, model info, token usage, and performance metrics"
+      ]
+    },
+    {
+      "file_name": "Chatbot-Message-Persistence.md",
+      "summary": "A comprehensive guide on implementing message persistence for AI chatbots using the AI SDK. The document covers creating new chats, loading existing chats, validating messages, storing chat history, managing message IDs, optimizing performance by sending only the last message, and handling client disconnects. It provides detailed code examples for both client-side (using useChat hook) and server-side implementations (using streamText and file-based storage).",
+      "toc": [
+        "Starting a new chat",
+        "Loading an existing chat",
+        "Validating messages on the server",
+        "Displaying the chat",
+        "Storing messages",
+        "Message IDs",
+        "Sending only the last message",
+        "Handling client disconnects"
+      ],
+      "key_apis": [
+        "useChat",
+        "streamText",
+        "validateUIMessages",
+        "convertToModelMessages",
+        "toUIMessageStreamResponse",
+        "generateId",
+        "createIdGenerator",
+        "createUIMessageStream",
+        "consumeStream",
+        "DefaultChatTransport"
+      ],
+      "code_examples": [
+        "New chat creation with redirect logic in app/chat/page.tsx",
+        "File-based chat store implementation with createChat/loadChat/saveChat functions",
+        "Server-side message validation with tools, metadata and data parts schemas",
+        "Chat UI component using useChat hook with initial messages",
+        "Message storage in onFinish callback of streamText response",
+        "Server-side message ID generation for persistence",
+        "Optimized message sending using prepareSendMessagesRequest",
+        "Client disconnect handling with consumeStream method"
+      ],
+      "main_workflows": [
+        "Chat initialization workflow: create new chat → generate ID → redirect to chat page",
+        "Message persistence workflow: load previous messages → validate → process new message → save complete conversation",
+        "Message validation workflow: validate against tools/schema → handle TypeValidationError → fallback gracefully",
+        "Performance optimization workflow: send only last message → load previous messages server-side → validate and append",
+        "Disconnect handling workflow: consume stream on backend → ensure completion → save results → restore on client reload"
+      ]
+    },
+    {
+      "file_name": "Error-Handling.md",
+      "summary": "This document provides comprehensive guidance on handling errors and warnings in the AI SDK. It covers warning management, error handling patterns in UI components, error callbacks, and testing techniques. The document focuses on practical implementations using React hooks and provides code examples for various error handling scenarios.",
+      "toc": [
+        "Warnings",
+        "When Warnings Appear",
+        "Warning Messages",
+        "Turning Off Warnings",
+        "Turn Off All Warnings",
+        "Custom Warning Handler",
+        "Error Handling",
+        "Error Helper Object",
+        "Alternative: replace last message",
+        "Error Handling Callback",
+        "Injecting Errors for Testing"
+      ],
+      "key_apis": [
+        "globalThis.AI_SDK_LOG_WARNINGS",
+        "useChat hook",
+        "useCompletion hook",
+        "onError callback",
+        "error object",
+        "regenerate function",
+        "sendMessage function",
+        "setMessages function"
+      ],
+      "code_examples": [
+        "Global warning configuration with globalThis.AI_SDK_LOG_WARNINGS = false",
+        "Custom warning handler function implementation",
+        "Complete chat component with error state handling and retry functionality",
+        "Alternative chat implementation that removes last message on error",
+        "Error handling callback implementation with useChat hook",
+        "Test error injection in API route handler"
+      ],
+      "main_workflows": [
+        "Warning management workflow: Configure global warning settings or custom handlers to control how AI SDK warnings are displayed and processed",
+        "Error state management workflow: Use the error object from AI SDK hooks to disable input fields, display error messages, and provide retry options in UI components",
+        "Error recovery workflow: Implement retry functionality using the regenerate function or message replacement strategies when errors occur",
+        "Callback-based error handling workflow: Configure onError callbacks to process errors programmatically and integrate with error tracking or logging systems",
+        "Testing workflow: Create controlled error conditions by throwing errors in route handlers to test error handling behavior"
+      ]
+    },
+    {
+      "file_name": "Stream-Protocols.md",
+      "summary": "This document describes the AI SDK UI stream protocols that enable real-time communication between backend and frontend. It covers two main protocols: Text Stream Protocol for simple text streaming and Data Stream Protocol for complex structured data including tool calls, reasoning content, and files. The protocols use HTTP streaming with Server-Sent Events (SSE) format and are designed to support features like chat interfaces, tool execution, and multi-modal AI interactions.",
+      "toc": [
+        "Stream Protocols",
+        "Text Stream Protocol",
+        "Text Stream Example",
+        "Data Stream Protocol",
+        "Message Start Part",
+        "Text Parts (Start/Delta/End)",
+        "Reasoning Parts (Start/Delta/End)",
+        "Source Parts (URL/Document)",
+        "File Part",
+        "Data Parts",
+        "Error Part",
+        "Tool Input Parts (Start/Delta/Available/Output)",
+        "Step Parts (Start/Finish)",
+        "Finish Message Part",
+        "Stream Termination",
+        "UI Message Stream Example"
+      ],
+      "key_apis": [
+        "useChat",
+        "useCompletion",
+        "useObject",
+        "streamText",
+        "toTextStreamResponse",
+        "toUIMessageStreamResponse",
+        "TextStreamChatTransport",
+        "UIMessage",
+        "convertToModelMessages",
+        "openai"
+      ],
+      "code_examples": [
+        "Text Stream Chat implementation with TextStreamChatTransport",
+        "Backend text stream endpoint using streamText and toTextStreamResponse",
+        "UI Message Stream Chat with default useChat configuration",
+        "Backend UI message stream endpoint using toUIMessageStreamResponse"
+      ],
+      "main_workflows": [
+        "Text streaming workflow for basic chat applications",
+        "Data streaming workflow for complex AI interactions with tools and structured data",
+        "Server-Sent Events (SSE) communication pattern",
+        "Tool execution streaming with input generation and output handling",
+        "Multi-modal content streaming including files, sources, and reasoning"
+      ]
+    },
+    {
+      "file_name": "Transport.md",
+      "summary": "This document explains the useChat transport system which provides fine-grained control over message sending and API communication. It covers default HTTP transport, custom configuration options including dynamic headers and authentication, request transformation capabilities, and guidance for building custom transport implementations. The system is designed for alternative communication protocols like WebSockets, custom authentication patterns, or specialized backend integrations.",
+      "toc": [
+        "Default Transport",
+        "Custom Transport Configuration",
+        "Dynamic Configuration",
+        "Request Transformation",
+        "Building Custom Transports"
+      ],
+      "key_apis": [
+        "useChat",
+        "DefaultChatTransport",
+        "HttpChatTransport",
+        "ChatTransport Interface",
+        "prepareSendMessagesRequest"
+      ],
+      "code_examples": [
+        "Default useChat usage with built-in HTTP transport",
+        "Custom transport configuration with headers and credentials",
+        "Dynamic configuration using functions for authentication tokens",
+        "Request transformation to limit message history and add custom headers"
+      ],
+      "main_workflows": [
+        "Default HTTP POST workflow to /api/chat endpoint",
+        "Custom authentication workflow with bearer tokens",
+        "Dynamic header generation workflow for runtime conditions",
+        "Message transformation workflow for API optimization",
+        "Custom transport implementation workflow for alternative protocols"
+      ]
+    },
+    {
+      "file_name": "Chatbot-Tool-Usage.md",
+      "summary": "This document explains how to implement tool usage in chatbot applications using the AI SDK's useChat hook and streamText function. It covers three types of tools: automatically executed server-side tools, automatically executed client-side tools, and tools requiring user interaction. The guide provides comprehensive examples of tool configuration, execution flow, error handling, dynamic tools, tool call streaming, and multi-step calls.",
+      "toc": [
+        "Example",
+        "API route",
+        "Client-side page",
+        "Error handling",
+        "Dynamic Tools",
+        "Tool call streaming",
+        "Step start parts",
+        "Server-side Multi-Step Calls",
+        "Errors"
+      ],
+      "key_apis": [
+        "useChat",
+        "streamText",
+        "convertToModelMessages",
+        "addToolOutput",
+        "onToolCall",
+        "sendAutomaticallyWhen",
+        "lastAssistantMessageIsCompleteWithToolCalls",
+        "DefaultChatTransport",
+        "stepCountIs",
+        "toUIMessageStreamResponse",
+        "createUIMessageResponse"
+      ],
+      "code_examples": [
+        "API route implementation with server-side tool execution using streamText and tool definitions",
+        "Client-side React component using useChat hook with onToolCall callback for automatic client-side tool execution",
+        "UI rendering of tool parts with different states (input-streaming, input-available, output-available, output-error)",
+        "Error handling implementation using addToolOutput with output-error state",
+        "Dynamic tools rendering using generic dynamic-tool type instead of specific tool types",
+        "Tool call streaming implementation showing real-time tool input generation",
+        "Step start parts rendering for multi-step tool call boundaries",
+        "Server-side multi-step calls with stopWhen condition using stepCountIs",
+        "Error handling with custom onError functions for surfacing tool execution errors"
+      ],
+      "main_workflows": [
+        "Tool execution flow: User message → API route → Tool call generation → Server execution → Client forwarding → Tool result handling",
+        "Three-tier tool architecture: Server-side tools with execute functions, automatically executed client-side tools, and user-interaction tools",
+        "Automatic submission workflow using sendAutomaticallyWhen with lastAssistantMessageIsCompleteWithToolCalls helper",
+        "Tool state management workflow through different part states: input-streaming → input-available → output-available/error",
+        "Error handling workflow for client-side tool execution with try-catch and output-error state reporting",
+        "Dynamic tool integration workflow for runtime-loaded tools and external providers",
+        "Multi-step tool execution with step boundaries and automatic server-side execution"
+      ]
+    }
+  ],
+  "key_themes": [
+    "React hooks (useChat, useCompletion, useObject) for AI interfaces",
+    "Streaming protocols and real-time communication",
+    "Tool calling and function execution",
+    "Message persistence and state management",
+    "Error handling and recovery patterns",
+    "Type safety with TypeScript and Zod schemas",
+    "Custom transport and configuration options",
+    "Multi-modal content handling (files, images, sources)",
+    "Advanced patterns (resumable streams, custom data)"
+  ],
+  "primary_apis": [
+    "useChat",
+    "useCompletion",
+    "useObject",
+    "streamText",
+    "streamObject",
+    "toUIMessageStreamResponse",
+    "toTextStreamResponse",
+    "DefaultChatTransport",
+    "TextStreamChatTransport",
+    "readUIMessageStream",
+    "convertToModelMessages"
+  ]
+}

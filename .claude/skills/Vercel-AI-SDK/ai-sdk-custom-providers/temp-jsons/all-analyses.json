@@ -1,0 +1,120 @@
+{
+  "total_files": 2,
+  "skill_domain": "AI SDK Custom Providers",
+  "documents": [
+    {
+      "file_name": "Writing-a-Custom-Provider.md",
+      "summary": "This document provides a comprehensive guide for creating custom providers compatible with the AI SDK's Language Model Specification V2. It covers the architecture, interfaces, implementation steps, and best practices for building providers that work seamlessly with different language models while maintaining a consistent interface.",
+      "toc": [
+        "Publishing Your Provider",
+        "Why the Language Model Specification?",
+        "Understanding the V2 Specification",
+        "Architecture",
+        "ProviderV2",
+        "LanguageModelV2",
+        "Understanding Input vs Output",
+        "LanguageModelV2Content",
+        "Text Content",
+        "Tool Calls",
+        "File Generation",
+        "Reasoning",
+        "Sources",
+        "LanguageModelV2Prompt",
+        "Message Roles",
+        "Prompt Parts",
+        "Text Parts",
+        "Reasoning Parts",
+        "File Parts",
+        "Tool Call Parts",
+        "Tool Result Parts",
+        "Streaming",
+        "Stream Parts",
+        "Usage Tracking",
+        "Tools",
+        "Function Tools",
+        "Provider-Defined Client Tools",
+        "Native URL Support",
+        "Provider Options",
+        "Error Handling",
+        "Provider Implementation Guide",
+        "Step 1: Create the Provider Entry Point",
+        "Step 2: Implement the Language Model",
+        "Step 3: Implement Message Conversion",
+        "Step 4: Implement Streaming",
+        "Step 5: Handle Errors",
+        "Next Steps"
+      ],
+      "key_apis": [
+        "ProviderV2",
+        "LanguageModelV2",
+        "EmbeddingModelV2",
+        "ImageModelV2",
+        "doGenerate",
+        "doStream",
+        "LanguageModelV2Content",
+        "LanguageModelV2Prompt",
+        "supportedUrls",
+        "postJsonToApi",
+        "TransformStream"
+      ],
+      "core_concepts": [
+        "Language Model Specification V2",
+        "Provider abstraction layer",
+        "Multimodal content support",
+        "Streaming architecture",
+        "Tool calling",
+        "Error handling patterns",
+        "Provider options system",
+        "Message conversion",
+        "URL native support",
+        "Usage tracking"
+      ],
+      "practical_examples": true,
+      "target_audience": "Developers who want to create custom AI providers and integrate them with the AI SDK",
+      "complexity_level": "advanced"
+    },
+    {
+      "file_name": "OpenAI-Compatible-Providers.md",
+      "summary": "This document explains how to use OpenAI-compatible language model providers with the AI SDK through the @ai-sdk/openai-compatible package. It covers installation, provider configuration, usage examples, and advanced features like custom metadata extraction and provider-specific options.",
+      "toc": [
+        "Setup",
+        "Provider Instance",
+        "Language Models",
+        "Example",
+        "Including model ids for auto-completion",
+        "Custom query parameters",
+        "Provider-specific options",
+        "Custom Metadata Extraction"
+      ],
+      "key_apis": [
+        "createOpenAICompatible",
+        "generateText",
+        "MetadataExtractor",
+        "chatModel",
+        "provider()"
+      ],
+      "core_concepts": [
+        "OpenAI API compatibility",
+        "Provider configuration",
+        "API authentication",
+        "Model instantiation",
+        "Streaming responses",
+        "Custom headers and query parameters",
+        "Provider-specific options",
+        "Metadata extraction",
+        "TypeScript type safety for model IDs"
+      ],
+      "practical_examples": true,
+      "target_audience": "Developers",
+      "complexity_level": "intermediate",
+      "file_name": "OpenAI-Compatible-Providers.md"
+    }
+  ],
+  "overall_complexity": "mixed",
+  "primary_use_cases": [
+    "Creating custom AI providers from scratch",
+    "Integrating OpenAI-compatible providers",
+    "Implementing streaming and tool calling",
+    "Provider configuration and optimization"
+  ]
+}

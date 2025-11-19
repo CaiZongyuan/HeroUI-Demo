@@ -1,0 +1,101 @@
+{
+  "skill_name": "ai-sdk-ui",
+  "skill_description": "This skill should be used when users need to build AI-powered user interfaces using the Vercel AI SDK UI. It provides comprehensive guidance on React hooks (useChat, useCompletion, useObject), streaming protocols, chat interfaces, tool calling, message persistence, error handling, and advanced patterns like resumable streams and custom data streaming.",
+  "output_directory": "ai-sdk-ui/",
+  "modules": {
+    "core": {
+      "source_docs": ["Chatbot.md", "Completion.md", "Object-Generation.md"],
+      "description": "Core React hooks and basic functionality for AI interfaces",
+      "key_apis": ["useChat", "useCompletion", "useObject", "streamText", "streamObject"]
+    },
+    "streaming": {
+      "source_docs": ["Streaming-Custom-Data.md", "Stream-Protocols.md", "Reading-UI-Message-Streams.md", "Chatbot-Resume-Streams.md"],
+      "description": "Advanced streaming patterns, protocols, and custom data streaming",
+      "key_apis": ["readUIMessageStream", "toUIMessageStreamResponse", "toTextStreamResponse", "createUIMessageStream"]
+    },
+    "tools": {
+      "source_docs": ["Chatbot-Tool-Usage.md"],
+      "description": "Tool calling, function execution, and complex interactions",
+      "key_apis": ["onToolCall", "addToolOutput", "sendAutomaticallyWhen", "stepCountIs"]
+    },
+    "persistence": {
+      "source_docs": ["Chatbot-Message-Persistence.md", "Message-Metadata.md"],
+      "description": "Message storage, persistence, and metadata handling",
+      "key_apis": ["validateUIMessages", "generateId", "createIdGenerator", "messageMetadata"]
+    },
+    "error_handling": {
+      "source_docs": ["Error-Handling.md"],
+      "description": "Error handling patterns, warning management, and recovery strategies",
+      "key_apis": ["globalThis.AI_SDK_LOG_WARNINGS", "onError", "error object", "regenerate"]
+    },
+    "transport": {
+      "source_docs": ["Transport.md"],
+      "description": "Custom transport configuration and request handling",
+      "key_apis": ["DefaultChatTransport", "ChatTransport", "prepareSendMessagesRequest"]
+    }
+  },
+  "routing_logic": [
+    {"pattern": "useChat|chat|conversation|messages", "route_to": "core", "priority": "high"},
+    {"pattern": "useCompletion|completion|text.*generation", "route_to": "core", "priority": "high"},
+    {"pattern": "useObject|object.*generation|structured.*data|enum.*output", "route_to": "core", "priority": "high"},
+    {"pattern": "stream|streaming|custom.*data|UIMessageStream|readUIMessageStream", "route_to": "streaming", "priority": "medium"},
+    {"pattern": "resumable|resume|reconnect|consumeSseStream", "route_to": "streaming", "priority": "medium"},
+    {"pattern": "tool|function.*call|execute|onToolCall|addToolOutput", "route_to": "tools", "priority": "medium"},
+    {"pattern": "persist|store|save|load|history|database", "route_to": "persistence", "priority": "medium"},
+    {"pattern": "metadata|usage|timestamp|token.*count", "route_to": "persistence", "priority": "low"},
+    {"pattern": "error|warning|onError|regenerate|retry|recovery", "route_to": "error_handling", "priority": "low"},
+    {"pattern": "transport|headers|authentication|credentials|request.*config", "route_to": "transport", "priority": "low"}
+  ],
+  "progressive_disclosure": {
+    "level1_metadata": {
+      "include": true,
+      "description": "YAML frontmatter with skill name and description",
+      "estimated_size": "~100 words"
+    },
+    "level2_skill_md": {
+      "include": true,
+      "description": "Main skill documentation with workflows, patterns, and module routing",
+      "estimated_size": "~4-5k words",
+      "sections": [
+        "Skill Overview",
+        "Core Functionality by Module",
+        "When to Use Each Module",
+        "Common Usage Patterns",
+        "Resource References"
+      ]
+    },
+    "level3_references": {
+      "include": true,
+      "description": "Original documentation files for detailed information",
+      "files": [
+        "Chatbot.md",
+        "Completion.md",
+        "Object-Generation.md",
+        "Streaming-Custom-Data.md",
+        "Stream-Protocols.md",
+        "Reading-UI-Message-Streams.md",
+        "Chatbot-Resume-Streams.md",
+        "Chatbot-Tool-Usage.md",
+        "Chatbot-Message-Persistence.md",
+        "Message-Metadata.md",
+        "Error-Handling.md",
+        "Transport.md"
+      ]
+    }
+  },
+  "content_strategy": {
+    "main_focus": "Practical implementation patterns with code examples",
+    "avoid_regeneration": true,
+    "reference_heavy": "Direct users to original documentation for detailed API specs",
+    "workflow_oriented": "Structure content around common development workflows",
+    "type_safety_emphasis": "Highlight TypeScript and Zod schema usage throughout"
+  },
+  "quality_checklist": [
+    "All key APIs from analysis are covered in routing logic",
+    "YAML frontmatter follows kebab-case naming and third-person description",
+    "Progressive disclosure maintains reasonable content sizes",
+    "Original documents preserved in references/ directory",
+    "Routing patterns prioritize common use cases",
+    "Module groupings reflect natural developer workflows"
+  ]
+}

@@ -1,0 +1,495 @@
+{
+  "summary": "AI SDK Documentation Analysis - Comprehensive collection of 12 Vercel AI SDK documentation files covering core functionality, tool calling, embeddings, structured data generation, streaming, error handling, and advanced features.",
+  "total_files": 12,
+  "documents": {
+    "Embeddings.md": {
+      "summary": "This document covers the AI SDK's embedding functionality, including how to embed single and multiple values, calculate similarity between embeddings, track token usage, and configure various settings like retries, timeouts, and custom headers.",
+      "toc": [
+        "Embedding a Single Value",
+        "Embedding Many Values",
+        "Embedding Similarity",
+        "Token Usage",
+        "Settings",
+        "Provider Options",
+        "Parallel Requests",
+        "Retries",
+        "Abort Signals and Timeouts",
+        "Custom Headers",
+        "Response Information"
+      ],
+      "key_apis": [
+        "embed",
+        "embedMany",
+        "cosineSimilarity",
+        "openai.textEmbeddingModel",
+        "mistral.textEmbeddingModel"
+      ],
+      "examples": [
+        "Single embedding with openai.textEmbeddingModel('text-embedding-3-small')",
+        "Batch embedding using embedMany with multiple text values",
+        "Cosine similarity calculation between two embeddings",
+        "Token usage tracking from embed result",
+        "Provider-specific configuration with dimensions",
+        "Parallel processing with maxParallelCalls parameter",
+        "Retry configuration with maxRetries parameter",
+        "Timeout handling with AbortSignal.timeout",
+        "Custom headers addition",
+        "Raw response access from provider"
+      ],
+      "prerequisites": [
+        "AI SDK core library ('ai')",
+        "Provider-specific SDK (e.g., '@ai-sdk/openai')",
+        "Access to embedding models (OpenAI, Mistral, etc.)",
+        "Understanding of vector embeddings and similarity concepts"
+      ]
+    },
+    "Error-Handling.md": {
+      "summary": "This document covers comprehensive error handling strategies for AI SDK operations, including regular synchronous errors, streaming errors, and stream abort scenarios with practical implementation patterns.",
+      "toc": [
+        "Handling regular errors",
+        "Handling streaming errors (simple streams)",
+        "Handling streaming errors (streaming with error support)",
+        "Handling stream aborts"
+      ],
+      "key_apis": [
+        "generateText",
+        "streamText",
+        "try/catch",
+        "onAbort callback",
+        "onFinish callback",
+        "textStream",
+        "fullStream"
+      ],
+      "examples": [
+        "try/catch with generateText for regular error handling",
+        "try/catch with streamText textStream for simple streaming errors",
+        "switch statement with fullStream for handling error, abort, and tool-error parts",
+        "onAbort callback with steps parameter for cleanup operations",
+        "onFinish callback with steps and totalUsage for normal completion"
+      ],
+      "prerequisites": [
+        "Basic understanding of JavaScript/TypeScript",
+        "Familiarity with AI SDK (ai package)",
+        "Knowledge of async/await patterns",
+        "Understanding of streaming concepts"
+      ]
+    },
+    "Generating-Structured-Data.md": {
+      "summary": "Comprehensive guide on generating structured data using AI SDK functions like generateObject and streamObject, covering schema validation, different output strategies (object, array, enum, no-schema), error handling, and practical implementation patterns for type-safe AI-generated data.",
+      "toc": [
+        "Generate Object",
+        "Accessing response headers & body",
+        "Stream Object",
+        "onError callback",
+        "Output Strategy",
+        "Object",
+        "Array",
+        "Enum",
+        "No Schema",
+        "Schema Name and Description",
+        "Accessing Reasoning",
+        "Error Handling",
+        "Repairing Invalid or Malformed JSON",
+        "Structured outputs with generateText and streamText",
+        "More Examples"
+      ],
+      "key_apis": [
+        "generateObject",
+        "streamObject",
+        "generateText",
+        "streamText",
+        "NoObjectGeneratedError",
+        "repairText",
+        "partialObjectStream",
+        "elementStream",
+        "experimental_output",
+        "experimental_partialOutputStream"
+      ],
+      "examples": [
+        "Recipe generation with nested object schema",
+        "Array generation for hero descriptions with streaming",
+        "Movie genre classification using enum output",
+        "No-schema generation for dynamic requests",
+        "Error handling with try-catch patterns",
+        "JSON repair using experimental_repairText",
+        "Structured output with generateText experimental_output",
+        "Streaming partial objects with streamText"
+      ],
+      "prerequisites": [
+        "AI SDK installation",
+        "Zod schema library integration",
+        "Understanding of TypeScript types",
+        "Basic knowledge of async/await patterns",
+        "Model provider configuration (e.g., OpenAI)",
+        "Error handling patterns for AI responses"
+      ]
+    },
+    "Generating-Text.md": {
+      "summary": "Comprehensive guide covering AI SDK Core functions for generating and streaming text from Large Language Models (LLMs), including detailed documentation of generateText and streamText functions, their features, callbacks, transformations, and integration patterns.",
+      "toc": [
+        "generateText function and usage",
+        "streamText function and streaming patterns",
+        "Error handling with onError callback",
+        "Stream processing with onChunk callback",
+        "Stream completion with onFinish callback",
+        "Full stream property for advanced event handling",
+        "Stream transformation and smoothing",
+        "Sources support for web-grounded responses",
+        "Integration examples across frameworks"
+      ],
+      "key_apis": [
+        "generateText",
+        "streamText",
+        "smoothStream",
+        "textStream",
+        "fullStream",
+        "onError callback",
+        "onChunk callback",
+        "onFinish callback",
+        "experimental_transform",
+        "toUIMessageStreamResponse",
+        "pipeTextStreamToResponse"
+      ],
+      "examples": [
+        "Basic text generation with generateText",
+        "Advanced prompting with system messages",
+        "Streaming text with async iteration",
+        "Error handling in streaming scenarios",
+        "Custom stream transformations (uppercase example)",
+        "Stream smoothing for better UX",
+        "Tool calling integration with streaming",
+        "Sources handling for web-grounded responses",
+        "Full stream event processing with switch statements",
+        "Multiple transformation chaining"
+      ],
+      "prerequisites": [
+        "AI SDK Core package ('ai')",
+        "Model provider setup (e.g., OpenAI, Google Generative AI)",
+        "Understanding of async/await patterns",
+        "Familiarity with streaming concepts",
+        "Optional: zod for tool input schemas",
+        "Optional: Next.js for UI integration examples",
+        "Optional: Perplexity or Google Generative AI for sources feature"
+      ]
+    },
+    "Language-Model-Middleware.md": {
+      "summary": "This document covers language model middleware functionality in the AI SDK, explaining how to intercept and modify language model calls to add features like guardrails, RAG, caching, and logging in a model-agnostic way.",
+      "toc": [
+        "Using Language Model Middleware",
+        "Multiple middlewares",
+        "Built-in Middleware",
+        "Extract Reasoning",
+        "Simulate Streaming",
+        "Default Settings",
+        "Community Middleware",
+        "Custom tool call parser",
+        "Implementing Language Model Middleware",
+        "Examples (Logging, Caching, RAG, Guardrails)",
+        "Configuring Per Request Custom Metadata"
+      ],
+      "key_apis": [
+        "wrapLanguageModel",
+        "streamText",
+        "generateText",
+        "extractReasoningMiddleware",
+        "simulateStreamingMiddleware",
+        "defaultSettingsMiddleware",
+        "transformParams",
+        "wrapGenerate",
+        "wrapStream",
+        "gemmaToolMiddleware",
+        "hermesToolMiddleware"
+      ],
+      "examples": [
+        "Basic middleware wrapping with wrapLanguageModel",
+        "Multiple middleware chaining",
+        "Extract reasoning from tagged responses",
+        "Simulate streaming for non-streaming models",
+        "Apply default settings to language models",
+        "Custom tool call parsing for Gemma models",
+        "Logging middleware implementation",
+        "Caching middleware example",
+        "RAG middleware for enhanced context",
+        "Guardrail middleware for content filtering",
+        "Per-request metadata configuration"
+      ],
+      "prerequisites": [
+        "AI SDK package ('ai')",
+        "Understanding of language model specification",
+        "TypeScript knowledge for middleware implementation",
+        "External packages for community middleware (e.g., '@ai-sdk-tool/parser')"
+      ]
+    },
+    "MCP-Tools.md": {
+      "summary": "The document covers Model Context Protocol (MCP) tools integration with the AI SDK, providing comprehensive guidance on initialization, transport methods, tool usage, resource management, and client lifecycle.",
+      "toc": [
+        "MCP Client Initialization",
+        "Transport Methods",
+        "Tool Usage",
+        "Resource Management",
+        "Prompt Management",
+        "Error Handling"
+      ],
+      "key_apis": [
+        "experimental_createMCPClient",
+        "StreamableHTTPClientTransport",
+        "StdioClientTransport",
+        "tools() method",
+        "resources() method",
+        "prompts() method"
+      ],
+      "examples": [
+        "HTTP transport setup for production",
+        "SSE transport for alternative HTTP-based communication",
+        "Stdio transport for local development",
+        "Schema discovery vs schema definition approaches",
+        "Tool integration with generateText",
+        "Resource listing and reading",
+        "Prompt template usage with arguments"
+      ],
+      "prerequisites": [
+        "AI SDK Core package",
+        "Understanding of Model Context Protocol",
+        "HTTP/Server-Sent Events knowledge",
+        "TypeScript for type-safe implementations"
+      ]
+    },
+    "Prompt-Engineering.md": {
+      "summary": "A comprehensive guide covering prompt engineering best practices for working with AI tools, focusing on tool calling optimization, schema design patterns, debugging techniques, and compatibility considerations when working with language models.",
+      "toc": [
+        "Tips",
+        "Prompts for Tools",
+        "Tool & Structured Data Schemas",
+        "Zod Dates",
+        "Optional Parameters",
+        "Temperature Settings",
+        "Debugging",
+        "Inspecting Warnings",
+        "HTTP Request Bodies"
+      ],
+      "key_apis": [
+        "generateObject",
+        "generateText",
+        "tool",
+        "openai",
+        "z.object",
+        "z.string",
+        "z.array",
+        "transform",
+        "nullable",
+        "optional",
+        "datetime",
+        "date"
+      ],
+      "examples": {
+        "date_handling": "Using z.string().date().transform() to convert string dates to Date objects",
+        "optional_parameters": "Using .nullable() instead of .optional() for strict schema validation compatibility",
+        "temperature_settings": "Setting temperature: 0 for deterministic tool calls and object generation",
+        "tool_description": "Adding .describe() to Zod schema properties for better model understanding",
+        "warning_inspection": "Checking result.warnings for provider compatibility issues",
+        "request_inspection": "Accessing result.request.body for HTTP payload debugging"
+      },
+      "prerequisites": [
+        "Strong tool-calling models (gpt-5 or gpt-4.1 recommended)",
+        "Understanding of Zod schema validation",
+        "Knowledge of JSON schema concepts",
+        "Familiarity with AI SDK providers (OpenAI, etc.)",
+        "Basic TypeScript/JavaScript knowledge"
+      ]
+    },
+    "Provider&Model-Management.md": {
+      "summary": "This document covers how to manage multiple AI providers and models in a centralized way using custom providers and provider registry, allowing developers to pre-configure settings, create model aliases, and access models through simple string IDs.",
+      "toc": [
+        "Custom Providers",
+        "Provider Registry",
+        "Combining Custom Providers, Provider Registry, and Middleware",
+        "Global Provider Configuration"
+      ],
+      "key_apis": [
+        "customProvider",
+        "createProviderRegistry",
+        "wrapLanguageModel",
+        "defaultSettingsMiddleware",
+        "languageModel()",
+        "textEmbeddingModel()",
+        "imageModel()",
+        "generateText",
+        "streamText",
+        "generateImage",
+        "embed",
+        "createOpenAICompatible",
+        "globalThis.AI_SDK_DEFAULT_PROVIDER"
+      ],
+      "examples": [
+        "Custom model settings with reasoningEffort configuration",
+        "Model name aliases (opus, sonnet, haiku)",
+        "Limited model availability with predefined text-medium/text-small/reasoning models",
+        "Provider registry setup with custom separator",
+        "Complex setup combining multiple providers with different configurations",
+        "Global provider configuration for simplified model access"
+      ],
+      "prerequisites": [
+        "AI SDK core package ('ai')",
+        "Provider-specific packages (@ai-sdk/openai, @ai-sdk/anthropic, @ai-sdk/groq, @ai-sdk/xai)",
+        "Environment variables for API keys (e.g., OPENAI_API_KEY, CUSTOM_API_KEY)",
+        "Basic understanding of middleware and language model concepts"
+      ]
+    },
+    "Settings.md": {
+      "summary": "This document covers AI SDK settings that augment large language model outputs, including common parameters like temperature, max tokens, and retry configurations that can be used with various AI providers.",
+      "toc": [
+        "maxOutputTokens",
+        "temperature",
+        "topP",
+        "topK",
+        "presencePenalty",
+        "frequencyPenalty",
+        "stopSequences",
+        "seed",
+        "maxRetries",
+        "abortSignal",
+        "headers"
+      ],
+      "key_apis": [
+        "generateText",
+        "AbortSignal.timeout",
+        "openai"
+      ],
+      "examples": [
+        "Basic usage with maxOutputTokens, temperature, and maxRetries",
+        "Timeout implementation using AbortSignal.timeout(5000)",
+        "Custom headers configuration with Prompt-Id"
+      ],
+      "prerequisites": [
+        "AI SDK installation",
+        "Provider-specific packages (e.g., @ai-sdk/openai)",
+        "Understanding of prompt engineering concepts"
+      ]
+    },
+    "Telemetry.md": {
+      "summary": "AI SDK Telemetry documentation explaining how to use OpenTelemetry to collect telemetry data from AI SDK function calls including generateText, streamText, generateObject, streamObject, embed, and embedMany functions with detailed span information and metadata collection.",
+      "toc": [
+        "Enabling telemetry",
+        "Telemetry Metadata",
+        "Custom Tracer",
+        "Collected Data",
+        "Span Details"
+      ],
+      "key_apis": [
+        "experimental_telemetry",
+        "generateText",
+        "streamText",
+        "generateObject",
+        "streamObject",
+        "embed",
+        "embedMany",
+        "OpenTelemetry",
+        "NodeTracerProvider"
+      ],
+      "examples": [
+        "experimental_telemetry: { isEnabled: true }",
+        "experimental_telemetry with functionId and metadata",
+        "custom tracer with NodeTracerProvider",
+        "recordInputs and recordOutputs control"
+      ],
+      "prerequisites": [
+        "Next.js OpenTelemetry setup for Next.js applications",
+        "OpenTelemetry framework understanding",
+        "AI SDK integration"
+      ]
+    },
+    "Testing.md": {
+      "summary": "Documentation on testing language models using the AI SDK Core, covering mock providers and test helpers to enable deterministic unit testing without actual API calls to language model providers.",
+      "toc": [
+        "Testing",
+        "Examples",
+        "generateText",
+        "streamText",
+        "generateObject",
+        "streamObject",
+        "Simulate UI Message Stream Responses"
+      ],
+      "key_apis": [
+        "MockEmbeddingModelV2",
+        "MockLanguageModelV2",
+        "mockId",
+        "mockValues",
+        "simulateReadableStream",
+        "generateText",
+        "streamText",
+        "generateObject",
+        "streamObject"
+      ],
+      "examples": [
+        "generateText with MockLanguageModelV2",
+        "streamText with simulateReadableStream",
+        "generateObject with zod schema validation",
+        "streamObject for streaming object generation",
+        "UI Message Stream simulation with Server-Sent Events"
+      ],
+      "prerequisites": [
+        "AI SDK Core library",
+        "Zod schema validation library (for generateObject/streamObject)",
+        "Understanding of language model v2 specification",
+        "Knowledge of Server-Sent Events for UI streaming"
+      ]
+    },
+    "Tool-Calling.md": {
+      "summary": "Comprehensive guide to the AI SDK's tool calling functionality, covering basic and advanced concepts including tools with description, inputSchema, and execute functions, multi-step workflows, dynamic tools, error handling, type safety, and advanced features.",
+      "toc": [
+        "Core Concepts",
+        "Multi-step Workflows",
+        "Dynamic Tools",
+        "Error Handling",
+        "Type Safety",
+        "Advanced Features"
+      ],
+      "key_apis": [
+        "generateText",
+        "streamText",
+        "tool",
+        "execute",
+        "inputSchema",
+        "stopWhen",
+        "onStepFinish",
+        "maxSteps",
+        "toolChoice"
+      ],
+      "examples": [
+        "Basic tool calling with weather information",
+        "Multi-step workflows with stopWhen",
+        "Dynamic tools for MCP integration",
+        "Error handling and repair strategies",
+        "Tool choice forcing",
+        "Lifecycle hooks with onStepFinish"
+      ],
+      "prerequisites": [
+        "AI SDK Core package",
+        "Zod for schema validation",
+        "TypeScript for type safety",
+        "Understanding of async/await patterns"
+      ]
+    }
+  },
+  "analysis_metadata": {
+    "total_apis_identified": 85,
+    "unique_categories": [
+      "Core Functions (generateText, streamText)",
+      "Structured Data (generateObject, streamObject)",
+      "Embeddings (embed, embedMany)",
+      "Tool Calling",
+      "Middleware",
+      "Testing (Mock providers)",
+      "Telemetry",
+      "Provider Management",
+      "Error Handling"
+    ],
+    "common_prerequisites": [
+      "AI SDK Core package ('ai')",
+      "Provider-specific packages",
+      "Zod schema validation",
+      "TypeScript knowledge",
+      "async/await patterns"
+    ]
+  }
+}

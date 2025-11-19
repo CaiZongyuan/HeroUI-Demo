@@ -1,0 +1,148 @@
+{
+  "skill_name": "ai-sdk",
+  "skill_description": "This skill should be used when users need to work with the Vercel AI SDK for building AI-powered applications. It provides comprehensive guidance on core APIs (generateText, streamText, generateObject), tool calling, embeddings, structured data generation, error handling, middleware, provider management, testing, telemetry, and advanced AI SDK features.",
+  "output_directory": "skills/ai-sdk/",
+  "modules": {
+    "core": {
+      "source_docs": [
+        "Generating-Text.md",
+        "Error-Handling.md"
+      ],
+      "description": "Core text generation and error handling functionality"
+    },
+    "structured-data": {
+      "source_docs": [
+        "Generating-Structured-Data.md",
+        "Prompt-Engineering.md"
+      ],
+      "description": "Structured data generation and prompt engineering"
+    },
+    "tools": {
+      "source_docs": [
+        "Tool-Calling.md",
+        "MCP-Tools.md"
+      ],
+      "description": "Tool calling and Model Context Protocol integration"
+    },
+    "embeddings": {
+      "source_docs": [
+        "Embeddings.md"
+      ],
+      "description": "Embedding functionality and similarity calculations"
+    },
+    "middleware": {
+      "source_docs": [
+        "Language-Model-Middleware.md",
+        "Provider&Model-Management.md"
+      ],
+      "description": "Middleware patterns and provider management"
+    },
+    "advanced": {
+      "source_docs": [
+        "Telemetry.md",
+        "Testing.md",
+        "Settings.md"
+      ],
+      "description": "Advanced features like telemetry, testing, and configuration"
+    }
+  },
+  "routing_logic": [
+    {
+      "pattern": "generateText|streamText|text generation|streaming",
+      "route_to": "core",
+      "description": "Text generation and streaming queries"
+    },
+    {
+      "pattern": "generateObject|streamObject|structured data|schema|Zod",
+      "route_to": "structured-data",
+      "description": "Structured data generation queries"
+    },
+    {
+      "pattern": "tool|tools|execute|function calling|tool choice|stopWhen",
+      "route_to": "tools",
+      "description": "Tool calling and workflow queries"
+    },
+    {
+      "pattern": "embed|embedding|cosineSimilarity|similarity",
+      "route_to": "embeddings",
+      "description": "Embedding-related queries"
+    },
+    {
+      "pattern": "middleware|wrapLanguageModel|guardrail|caching|RAG",
+      "route_to": "middleware",
+      "description": "Middleware and provider management queries"
+    },
+    {
+      "pattern": "telemetry|OpenTelemetry|testing|mock|debug|settings",
+      "route_to": "advanced",
+      "description": "Advanced features and configuration queries"
+    },
+    {
+      "pattern": "error handling|onError|onAbort|try.*catch",
+      "route_to": "core",
+      "description": "Error handling scenarios (routed to core module)"
+    }
+  ],
+  "progressive_disclosure": {
+    "level1_metadata": {
+      "include": true,
+      "description": "Skill name and description for discovery"
+    },
+    "level2_skill_md": {
+      "include": true,
+      "description": "Main SKILL.md with comprehensive overview",
+      "target_length": "<8k words"
+    },
+    "level3_references": {
+      "include": true,
+      "documents": [
+        "Embeddings.md",
+        "Error-Handling.md",
+        "Generating-Structured-Data.md",
+        "Generating-Text.md",
+        "Language-Model-Middleware.md",
+        "MCP-Tools.md",
+        "Prompt-Engineering.md",
+        "Provider&Model-Management.md",
+        "Settings.md",
+        "Telemetry.md",
+        "Testing.md",
+        "Tool-Calling.md"
+      ],
+      "description": "Original documentation files for detailed reference"
+    }
+  },
+  "skill_structure": {
+    "main_file": "SKILL.md",
+    "references_directory": "references/",
+    "temp_jsons_directory": "temp-jsons/"
+  },
+  "content_strategy": {
+    "overview": {
+      "focus": "Core SDK value proposition and main use cases",
+      "include_quick_start": true,
+      "include_main_apis": true
+    },
+    "routing_patterns": {
+      "strategy": "Pattern-based routing to specific functional modules",
+      "fallback": "Core functionality when patterns don't match"
+    },
+    "examples": {
+      "selection": "Most common and practical examples from each module",
+      "avoid_overwhelming": true
+    },
+    "progressive_complexity": {
+      "level1": "Basic text generation and tool calling",
+      "level2": "Structured data and error handling",
+      "level3": "Advanced features and integrations"
+    }
+  },
+  "quality_requirements": {
+    "yaml_frontmatter": true,
+    "third_person_description": true,
+    "kebab_case_name": true,
+    "routing_coverage": "key_apis from all-analyses.json",
+    "progressive_disclosure": true,
+    "streamlined_directory": true
+  }
+}
