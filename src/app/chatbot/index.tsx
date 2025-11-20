@@ -1,8 +1,12 @@
 import { MessageRenderer } from "@/src/components/MessageRenderer";
+import { ThinkingIndicator } from "@/src/components/ThinkingIndicator";
+import { ThinkingLogModal } from "@/src/components/ThinkingLogModal";
+import { ThoughtsButton } from "@/src/components/ThoughtsButton";
 import { db } from "@/src/db/client";
 import { chatMessages, chatSessions } from "@/src/db/schema";
 import { currentSessionIdAtom, sessionsAtom } from "@/src/store/chat-session";
 import { generateAPIUrl } from "@/src/utils/expoUrl";
+import { calculateThinkingTime, extractCurrentActivity, groupThinkingLogs, hasThinkingLogs } from "@/src/utils/message-utils";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { asc, desc, eq, isNull } from "drizzle-orm";
@@ -20,6 +24,11 @@ export default function App() {
   const [sessions, setSessions] = useAtom(sessionsAtom);
   const [initialMessages, setInitialMessages] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  // Thinking Logs State
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [selectedMessageLogs, setSelectedMessageLogs] = useState<any[]>([]);
+  const [selectedMessageTime, setSelectedMessageTime] = useState("");
 
   // Function to refresh sessions list
   const refreshSessions = async () => {
@@ -47,7 +56,6 @@ export default function App() {
           .from(chatMessages)
           .where(eq(chatMessages.sessionId, currentSessionId))
           .orderBy(asc(chatMessages.createdAt));
-          console.log("history:",history);
 
         setInitialMessages(
           history
@@ -55,10 +63,21 @@ export default function App() {
               try {
                 // Parse the stored JSON message
                 const parsedMessage = JSON.parse(msg.message as string);
-                return {
+                
+                // Sanitize message structure
+                const sanitizedMessage = {
                   ...parsedMessage,
-                  id: msg.id, // Ensure we use the DB ID if needed, or keep the one from JSON
+                  id: msg.id, // Ensure we use the DB ID
+                  parts: Array.isArray(parsedMessage.parts) ? parsedMessage.parts : undefined,
+                  content: parsedMessage.content || '',
                 };
+
+                // If parts are missing but content exists, create text part (optional but good for consistency)
+                if (!sanitizedMessage.parts && sanitizedMessage.content) {
+                   sanitizedMessage.parts = [{ type: 'text', text: sanitizedMessage.content }];
+                }
+
+                return sanitizedMessage;
               } catch (e) {
                 console.warn("Failed to parse message JSON:", msg.message);
                 return null;
@@ -66,7 +85,6 @@ export default function App() {
             })
             .filter((msg) => msg !== null)
         );
-        console.log("initialMessages:",initialMessages);
         
       } catch (e) {
         console.error("Failed to load history", e);
@@ -84,7 +102,7 @@ export default function App() {
     currentSessionIdRef.current = currentSessionId;
   }, [currentSessionId]);
 
-  const { messages, error, sendMessage, setMessages } = useChat({
+  const { messages, error, sendMessage, setMessages, status } = useChat({
     transport: new DefaultChatTransport({
       fetch: expoFetch as unknown as typeof globalThis.fetch,
       api: generateAPIUrl("/api/chat"),
@@ -92,7 +110,6 @@ export default function App() {
     onError: (error) => console.error(error, "ERROR"),
     onFinish: async ({ message }) => {
       const sessionId = currentSessionIdRef.current;
-      console.log("onFinish triggered, sessionId:", sessionId);
       
       if (!sessionId) {
         console.log("No current session ID in onFinish");
@@ -101,15 +118,12 @@ export default function App() {
       
       // Save assistant message
       try {
-        console.log("Saving assistant message for session:", sessionId);
-
         await db.insert(chatMessages).values({
           id: message.id,
           sessionId: sessionId,
           message: JSON.stringify(message),
           createdAt: new Date(),
         });
-        console.log("Assistant message saved");
       } catch (e) {
         console.error("Failed to save assistant message", e);
       }
@@ -182,7 +196,15 @@ export default function App() {
 
   useEffect(() => {
     scrollViewRef.current?.scrollToEnd({ animated: true });
-  }, [messages]);
+  }, [messages, status]);
+
+  const handleShowLogs = (message: any) => {
+    const logs = groupThinkingLogs(message);
+    const time = calculateThinkingTime(message.createdAt);
+    setSelectedMessageLogs(logs);
+    setSelectedMessageTime(time);
+    setIsModalVisible(true);
+  };
 
   if (error) return <Text>{error.message}</Text>;
 
@@ -206,38 +228,55 @@ export default function App() {
             }}
             showsVerticalScrollIndicator={false}
           >
-            {messages.map((m) => (
-              <View key={m.id}>
-                {m.parts ? (
-                  m.parts.map((part, i) => {
-                    if (part.type === "text") {
-                      return (
-                        <MessageRenderer
-                          key={i}
-                          role={m.role as "user" | "assistant"}
-                          content={part.text}
-                        />
-                      );
-                    }
-                    return (
-                      <View key={i} style={{ marginVertical: 12 }}>
-                        <Text style={{ fontWeight: "bold", marginBottom: 4 }}>
-                          {m.role === "user" ? "You" : "Assistant"}
-                        </Text>
-                        <Text style={{ color: "gray", fontSize: 12 }}>
-                          [Tool Result] {JSON.stringify(part)}
-                        </Text>
-                      </View>
-                    );
-                  })
-                ) : (
-                  <MessageRenderer
-                    role={m.role as "user" | "assistant"}
-                    content={m.content}
-                  />
-                )}
-              </View>
-            ))}
+            {messages.map((m, index) => {
+              const isLastMessage = index === messages.length - 1;
+              const isStreaming = status === 'streaming' || status === 'submitted';
+              const showThinkingIndicator = isLastMessage && isStreaming && m.role === 'assistant';
+              
+              // Helper to extract text content from parts
+              const getTextContent = (message: any) => {
+                if (message.parts) {
+                  return message.parts
+                    .filter((part: any) => part.type === 'text')
+                    .map((part: any) => part.text)
+                    .join('');
+                }
+                return message.content || '';
+              };
+
+              const messageContent = getTextContent(m);
+
+              return (
+                <View key={m.id}>
+                  {m.role === 'user' ? (
+                     <MessageRenderer
+                       role="user"
+                       content={messageContent}
+                     />
+                  ) : (
+                    <View>
+                       {/* Render Text Content Only */}
+                       <MessageRenderer
+                         role="assistant"
+                         content={messageContent}
+                       />
+
+                       {/* Thinking Indicator (Streaming) */}
+                       {showThinkingIndicator && (
+                         <ThinkingIndicator status={extractCurrentActivity(m)} />
+                       )}
+
+                       {/* Thoughts Button (Finished) */}
+                       {!isStreaming && m.role === 'assistant' && hasThinkingLogs(m) && (
+                         <ThoughtsButton onPress={() => handleShowLogs(m)} />
+                       )}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+
+
           </ScrollView>
           <View
             style={{
@@ -267,6 +306,13 @@ export default function App() {
             />
           </View>
         </View>
+        
+        <ThinkingLogModal
+          visible={isModalVisible}
+          onClose={() => setIsModalVisible(false)}
+          logs={selectedMessageLogs}
+          totalTime={selectedMessageTime}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

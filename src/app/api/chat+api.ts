@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
     const result = streamText({
         model: ollama('qwen3:8b'),
-        providerOptions: { ollama: { think: false } },
+        providerOptions: { ollama: { think: true } },
         messages: convertToModelMessages(messages),
         stopWhen: stepCountIs(5),
         tools: {
@@ -48,10 +48,6 @@ export async function POST(req: Request) {
     });
 
     return result.toUIMessageStreamResponse({
-        originalMessages: messages,
-        onFinish: ({ messages }) => {
-            console.log("messages", messages);
-        },
         headers: {
             'Content-Type': 'application/octet-stream',
             'Content-Encoding': 'none',
