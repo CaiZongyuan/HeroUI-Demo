@@ -48,6 +48,10 @@ export async function POST(req: Request) {
     });
 
     return result.toUIMessageStreamResponse({
+        originalMessages: messages,
+        onFinish: ({ messages }) => {
+            console.log("messages", messages);
+        },
         headers: {
             'Content-Type': 'application/octet-stream',
             'Content-Encoding': 'none',

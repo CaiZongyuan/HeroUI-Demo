@@ -38,9 +38,11 @@ export default function ChatbotLayout() {
           .where(isNull(chatSessions.deletedAt))
           .orderBy(desc(chatSessions.createdAt));
         setSessions(result);
-        
-        // Select the most recent session if none selected
-        if (!currentSessionId && result.length > 0) {
+
+        // Auto-create new session if none exists
+        if (!currentSessionId && result.length === 0) {
+          await createNewSession();
+        } else if (!currentSessionId && result.length > 0) {
           setCurrentSessionId(result[0].id);
         }
       } catch (e) {
@@ -52,17 +54,36 @@ export default function ChatbotLayout() {
   }, [success, setSessions, currentSessionId, setCurrentSessionId]);
 
   const createNewSession = async () => {
-    const newId = Math.random().toString(36).substring(7);
-    const newSession = {
-      id: newId,
-      title: `New Chat ${new Date().toLocaleTimeString()}`,
-      createdAt: new Date(),
-      deletedAt: null,
-    };
-
     try {
+      // Check if there's already a session with default "New Chat" title pattern
+      const existingNewSession = sessions.find(session =>
+        session.title.startsWith('New Chat')
+      );
+
+      if (existingNewSession) {
+        // Jump to existing new session instead of creating a new one
+        setCurrentSessionId(existingNewSession.id);
+        return;
+      }
+
+      // Create new session only if no empty one exists
+      const newId = Math.random().toString(36).substring(7);
+      const newSession = {
+        id: newId,
+        title: `New Chat ${new Date().toLocaleTimeString()}`,
+        createdAt: new Date(),
+        deletedAt: null,
+      };
+
       await db.insert(chatSessions).values(newSession);
-      setSessions((prev) => [newSession, ...prev]);
+
+      // Reload sessions from database to get updated list
+      const result = await db
+        .select()
+        .from(chatSessions)
+        .where(isNull(chatSessions.deletedAt))
+        .orderBy(desc(chatSessions.createdAt));
+      setSessions(result);
       setCurrentSessionId(newId);
     } catch (e) {
       console.error("Failed to create session", e);
@@ -127,7 +148,23 @@ export default function ChatbotLayout() {
         })}
         drawerContent={(props) => (
           <DrawerContentScrollView {...props}>
-            <DrawerItemList {...props} />
+            <TouchableOpacity
+              onPress={createNewSession}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                padding: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: '#e0e0e0',
+                backgroundColor: '#f8f9fa',
+              }}
+            >
+              <Ionicons name="add-circle" size={24} color="#007AFF" />
+              <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '600', color: '#007AFF' }}>
+                New Chat
+              </Text>
+            </TouchableOpacity>
+
             {sessions.map((session) => (
               <View key={session.id} style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 10 }}>
                 <DrawerItem
@@ -139,7 +176,7 @@ export default function ChatbotLayout() {
                   }}
                   style={{ flex: 1 }}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => deleteSession(session.id)}
                   style={{ padding: 8 }}
                 >
@@ -154,7 +191,7 @@ export default function ChatbotLayout() {
           name="index"
           options={{
             title: "Chatbot",
-            drawerLabel: "Current Chat",
+            drawerLabel: () => null, // Hide the default drawer item
           }}
         />
       </Drawer>

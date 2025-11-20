@@ -1,13 +1,13 @@
 import { MessageRenderer } from "@/src/components/MessageRenderer";
 import { db } from "@/src/db/client";
-import { chatMessages } from "@/src/db/schema";
-import { currentSessionIdAtom } from "@/src/store/chat-session";
+import { chatMessages, chatSessions } from "@/src/db/schema";
+import { currentSessionIdAtom, sessionsAtom } from "@/src/store/chat-session";
 import { generateAPIUrl } from "@/src/utils/expoUrl";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, desc, isNull } from "drizzle-orm";
 import { fetch as expoFetch } from "expo/fetch";
-import { useAtomValue } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { useEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, Text, TextInput, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
@@ -17,8 +17,23 @@ export default function App() {
   const [input, setInput] = useState("");
   const scrollViewRef = useRef<ScrollView>(null);
   const currentSessionId = useAtomValue(currentSessionIdAtom);
+  const [sessions, setSessions] = useAtom(sessionsAtom);
   const [initialMessages, setInitialMessages] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  // Function to refresh sessions list
+  const refreshSessions = async () => {
+    try {
+      const result = await db
+        .select()
+        .from(chatSessions)
+        .where(isNull(chatSessions.deletedAt))
+        .orderBy(desc(chatSessions.createdAt));
+      setSessions(result);
+    } catch (e) {
+      console.error("Failed to refresh sessions", e);
+    }
+  };
 
   // Load history when session changes
   useEffect(() => {
@@ -114,6 +129,26 @@ export default function App() {
     const userMessageContent = input;
     setInput("");
 
+    // Update session title to first message if it's still the default "New Chat" title
+    try {
+      const currentSession = sessions.find(s => s.id === currentSessionId);
+      if (currentSession && currentSession.title.startsWith('New Chat')) {
+        const newTitle = userMessageContent.length > 30
+          ? userMessageContent.substring(0, 30) + "..."
+          : userMessageContent;
+
+        await db
+          .update(chatSessions)
+          .set({ title: newTitle })
+          .where(eq(chatSessions.id, currentSessionId));
+
+        // Refresh sessions to show updated title and allow creating new empty sessions
+        await refreshSessions();
+      }
+    } catch (e) {
+      console.error("Failed to update session title", e);
+    }
+
     // Optimistically add user message is handled by useChat, but we need to save it
     const messageId = Math.random().toString(36).substring(7);
     const userMessage = {
@@ -130,7 +165,7 @@ export default function App() {
         message: JSON.stringify(userMessage),
         createdAt: new Date(),
       });
-      
+
       sendMessage({ text: userMessageContent });
     } catch (e) {
       console.error("Failed to save user message", e);
