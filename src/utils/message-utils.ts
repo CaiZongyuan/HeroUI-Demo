@@ -68,3 +68,26 @@ export const formatToolCallForDisplay = (toolInvocation: any) => {
         result: toolInvocation.result || 'No result',
     };
 };
+
+export const extractActiveThinkingInfo = (message: UIMessage) => {
+    if (!message.parts || message.parts.length === 0) return null;
+
+    const lastPart = message.parts[message.parts.length - 1] as any;
+
+    if (lastPart.type === 'reasoning') {
+        return {
+            type: 'reasoning' as const,
+            title: 'Thinking Process',
+            content: lastPart.text,
+        };
+    } else if (lastPart.type === 'tool-invocation') {
+        const toolName = lastPart.toolInvocation?.toolName || lastPart.toolName || 'Unknown Tool';
+        return {
+            type: 'tool' as const,
+            title: `Using Tool: ${toolName}`,
+            content: 'Processing...', // Tool invocations might not have streaming text content in the same way, or we could show args
+        };
+    }
+
+    return null;
+};

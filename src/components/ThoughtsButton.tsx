@@ -18,14 +18,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingVertical: 6,
     paddingHorizontal: 10,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#27272a', // Zinc 800
     borderRadius: 12,
     marginTop: 4,
     marginBottom: 8,
   },
   text: {
     fontSize: 12,
-    color: '#555',
+    color: '#a1a1aa',
     fontWeight: '500',
   },
 });

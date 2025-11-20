@@ -1,3 +1,4 @@
+import React from 'react';
 import { Text, View } from "react-native";
 import { useMarkdown } from "react-native-marked";
 
@@ -7,25 +8,47 @@ interface MessageProps {
 }
 
 export const MessageRenderer: React.FC<MessageProps> = ({ role, content }) => {
-  const markdownElements = useMarkdown(content);
+  const markdownElements = useMarkdown(content, {
+    colors: {
+      text: '#FFFFFF',
+      code: '#27272a',
+      link: '#3b82f6',
+      background: 'transparent',
+      border: '#333',
+    },
+  });
 
   return (
-    <View style={{ marginVertical: 12 }}>
-      <Text style={{ fontWeight: "bold", marginBottom: 4 }}>
-        {role === "user" ? "You" : "Assistant"}
-      </Text>
-      {role === "assistant" ? (
-        <View>
+    <View 
+      style={{ 
+        marginVertical: 8, 
+        alignItems: role === 'user' ? 'flex-end' : 'flex-start',
+        width: '100%',
+      }}
+    >
+      {role === 'assistant' ? (
+        <View style={{ width: '100%' }}>
           {markdownElements.map((element, index) => (
             <View key={`markdown-${index}`}>
+              {/* We might need to pass styles to markdown renderer for dark mode text */}
               {element}
             </View>
           ))}
         </View>
       ) : (
-        <Text style={{ fontSize: 16, lineHeight: 20, color: "#333" }}>
-          {content}
-        </Text>
+        <View 
+          style={{ 
+            backgroundColor: '#27272a', // Zinc 800
+            borderRadius: 18,
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            maxWidth: '80%',
+          }}
+        >
+          <Text style={{ fontSize: 16, lineHeight: 22, color: "#fff" }}>
+            {content}
+          </Text>
+        </View>
       )}
     </View>
   );

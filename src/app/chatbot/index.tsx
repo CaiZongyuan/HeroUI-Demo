@@ -1,3 +1,4 @@
+import { ActiveThinkingCard } from "@/src/components/ActiveThinkingCard";
 import { MessageRenderer } from "@/src/components/MessageRenderer";
 import { ThinkingIndicator } from "@/src/components/ThinkingIndicator";
 import { ThinkingLogModal } from "@/src/components/ThinkingLogModal";
@@ -6,7 +7,7 @@ import { db } from "@/src/db/client";
 import { chatMessages, chatSessions } from "@/src/db/schema";
 import { currentSessionIdAtom, sessionsAtom } from "@/src/store/chat-session";
 import { generateAPIUrl } from "@/src/utils/expoUrl";
-import { calculateThinkingTime, extractCurrentActivity, groupThinkingLogs, hasThinkingLogs } from "@/src/utils/message-utils";
+import { calculateThinkingTime, extractActiveThinkingInfo, extractCurrentActivity, groupThinkingLogs, hasThinkingLogs } from "@/src/utils/message-utils";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { asc, desc, eq, isNull } from "drizzle-orm";
@@ -209,13 +210,13 @@ export default function App() {
   if (error) return <Text>{error.message}</Text>;
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={["bottom"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }} edges={["bottom"]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
       >
-        <View className="flex-1">
+        <View className="flex-1" style={{ backgroundColor: '#000000' }}>
           <ScrollView
             ref={scrollViewRef}
             style={{ flex: 1, paddingHorizontal: 8 }}
@@ -255,21 +256,32 @@ export default function App() {
                      />
                   ) : (
                     <View>
-                       {/* Render Text Content Only */}
+                       {/* Active Thinking Card (Streaming) - NOW FIRST */}
+                       {showThinkingIndicator && (
+                         (() => {
+                           const activeInfo = extractActiveThinkingInfo(m);
+                           return activeInfo ? (
+                             <ActiveThinkingCard 
+                               title={activeInfo.title}
+                               content={activeInfo.content}
+                               type={activeInfo.type}
+                             />
+                           ) : (
+                             <ThinkingIndicator status={extractCurrentActivity(m)} />
+                           );
+                         })()
+                       )}
+
+                       {/* Thoughts Button (Finished) - NOW FIRST */}
+                       {!isStreaming && m.role === 'assistant' && hasThinkingLogs(m) && (
+                         <ThoughtsButton onPress={() => handleShowLogs(m)} />
+                       )}
+
+                       {/* Render Text Content Only - NOW SECOND */}
                        <MessageRenderer
                          role="assistant"
                          content={messageContent}
                        />
-
-                       {/* Thinking Indicator (Streaming) */}
-                       {showThinkingIndicator && (
-                         <ThinkingIndicator status={extractCurrentActivity(m)} />
-                       )}
-
-                       {/* Thoughts Button (Finished) */}
-                       {!isStreaming && m.role === 'assistant' && hasThinkingLogs(m) && (
-                         <ThoughtsButton onPress={() => handleShowLogs(m)} />
-                       )}
                     </View>
                   )}
                 </View>
@@ -283,20 +295,22 @@ export default function App() {
               paddingHorizontal: 12,
               paddingTop: 12,
               paddingBottom: 12,
-              backgroundColor: "#fff",
+              backgroundColor: "#000000",
               borderTopWidth: 1,
-              borderTopColor: "#eee",
+              borderTopColor: "#333",
             }}
           >
             <TextInput
               style={{
-                backgroundColor: "#f5f5f5",
+                backgroundColor: "#27272a",
                 borderRadius: 20,
                 paddingHorizontal: 16,
                 paddingVertical: 12,
                 fontSize: 16,
+                color: "#fff",
               }}
               placeholder={currentSessionId ? "Say something..." : "Create a new chat to start"}
+              placeholderTextColor="#666"
               value={input}
               onChangeText={setInput}
               onSubmitEditing={handleSend}

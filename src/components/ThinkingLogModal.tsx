@@ -26,7 +26,7 @@ export const ThinkingLogModal: React.FC<ThinkingLogModalProps> = ({ visible, onC
               <Text style={styles.headerTitle}>Thinking Process</Text>
               <Text style={styles.timeText}>Thought for {totalTime}</Text>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="#333" />
+                <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
 
@@ -66,12 +66,12 @@ export const ThinkingLogModal: React.FC<ThinkingLogModalProps> = ({ visible, onC
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'flex-end',
   },
   modalContainer: {
     height: '90%',
-    backgroundColor: '#fff',
+    backgroundColor: '#18181b', // Zinc 900
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',
@@ -85,15 +85,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#27272a',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#fff',
   },
   timeText: {
     fontSize: 14,
-    color: '#666',
+    color: '#a1a1aa',
   },
   closeButton: {
     padding: 4,
@@ -107,10 +108,10 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: '#27272a',
   },
   doneButton: {
-    backgroundColor: '#000',
+    backgroundColor: '#27272a', // Zinc 800
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -123,14 +124,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#555',
+    color: '#a1a1aa',
     marginTop: 8,
     marginBottom: 4,
   },
   codeBlock: {
     fontFamily: 'monospace',
     fontSize: 12,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#27272a',
+    color: '#e4e4e7',
     padding: 8,
     borderRadius: 4,
   },

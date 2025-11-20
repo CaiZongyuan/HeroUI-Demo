@@ -1,8 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
-  DrawerContentScrollView,
-  DrawerItem,
-  DrawerItemList,
+    DrawerContentScrollView,
+    DrawerItem
 } from "@react-navigation/drawer";
 import { DrawerActions } from "@react-navigation/native";
 import { desc, eq, isNull } from "drizzle-orm";
@@ -129,12 +128,16 @@ export default function ChatbotLayout() {
         screenOptions={({ navigation }) => ({
           headerShown: true,
           swipeEnabled: false,
+          headerStyle: {
+            backgroundColor: '#000000',
+          },
+          headerTintColor: '#fff',
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
               style={{ marginLeft: 16 }}
             >
-              <Ionicons name="menu" size={24} color="black" />
+              <Ionicons name="menu" size={24} color="white" />
             </TouchableOpacity>
           ),
           headerRight: () => (
@@ -142,7 +145,7 @@ export default function ChatbotLayout() {
               onPress={createNewSession}
               style={{ marginRight: 16 }}
             >
-              <Ionicons name="add" size={24} color="black" />
+              <Ionicons name="add" size={24} color="white" />
             </TouchableOpacity>
           ),
         })}

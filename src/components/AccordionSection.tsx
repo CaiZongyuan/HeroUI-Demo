@@ -29,7 +29,7 @@ export const AccordionSection: React.FC<AccordionSectionProps> = ({ title, conte
       <TouchableOpacity onPress={toggleExpand} style={styles.header}>
         <Text style={styles.title}>{title}</Text>
         <Animated.View style={arrowStyle}>
-          <Ionicons name="chevron-forward" size={20} color="#666" />
+          <Ionicons name="chevron-forward" size={20} color="#a1a1aa" />
         </Animated.View>
       </TouchableOpacity>
       {expanded && (
@@ -48,30 +48,30 @@ export const AccordionSection: React.FC<AccordionSectionProps> = ({ title, conte
 const styles = StyleSheet.create({
   container: {
     marginBottom: 12,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#18181b', // Zinc 900
     borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#27272a',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#27272a', // Zinc 800
   },
   title: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: '#fff',
   },
   content: {
     padding: 12,
   },
   contentText: {
     fontSize: 14,
-    color: '#444',
+    color: '#a1a1aa',
     lineHeight: 20,
   },
 });
