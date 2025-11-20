@@ -5,7 +5,7 @@ import { currentSessionIdAtom, sessionsAtom } from "@/src/store/chat-session";
 import { generateAPIUrl } from "@/src/utils/expoUrl";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { asc, eq, desc, isNull } from "drizzle-orm";
+import { asc, desc, eq, isNull } from "drizzle-orm";
 import { fetch as expoFetch } from "expo/fetch";
 import { useAtom, useAtomValue } from "jotai";
 import { useEffect, useRef, useState } from "react";
@@ -47,6 +47,7 @@ export default function App() {
           .from(chatMessages)
           .where(eq(chatMessages.sessionId, currentSessionId))
           .orderBy(asc(chatMessages.createdAt));
+          console.log("history:",history);
 
         setInitialMessages(
           history
@@ -65,6 +66,8 @@ export default function App() {
             })
             .filter((msg) => msg !== null)
         );
+        console.log("initialMessages:",initialMessages);
+        
       } catch (e) {
         console.error("Failed to load history", e);
       } finally {
@@ -154,7 +157,12 @@ export default function App() {
     const userMessage = {
       id: messageId,
       role: "user",
-      content: userMessageContent,
+      parts: [
+        {
+          type: "text",
+          text: userMessageContent,
+        }
+      ],
       createdAt: new Date(),
     };
 
