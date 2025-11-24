@@ -1,5 +1,6 @@
 import { ActiveThinkingCard } from "@/src/components/ActiveThinkingCard";
 import { MessageRenderer } from "@/src/components/MessageRenderer";
+import { PLUGIN_RENDERERS } from "@/src/components/plugin-renderers";
 import { ThinkingIndicator } from "@/src/components/ThinkingIndicator";
 import { ThinkingLogModal } from "@/src/components/ThinkingLogModal";
 import { ThoughtsButton } from "@/src/components/ThoughtsButton";
@@ -7,7 +8,7 @@ import { db } from "@/src/db/client";
 import { chatMessages, chatSessions } from "@/src/db/schema";
 import { currentSessionIdAtom, sessionsAtom } from "@/src/store/chat-session";
 import { generateAPIUrl } from "@/src/utils/expoUrl";
-import { calculateThinkingTime, extractActiveThinkingInfo, extractCurrentActivity, groupThinkingLogs, hasThinkingLogs } from "@/src/utils/message-utils";
+import { calculateThinkingTime, extractActiveThinkingInfo, extractCurrentActivity, extractPluginOutputs, groupThinkingLogs, hasThinkingLogs } from "@/src/utils/message-utils";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { asc, desc, eq, isNull } from "drizzle-orm";
@@ -291,7 +292,34 @@ export default function App() {
                          <ThoughtsButton onPress={() => handleShowLogs(m)} />
                        )}
 
-                       {/* Render Text Content Only - NOW SECOND */}
+                       {/* Plugin Outputs - Custom UI Cards */}
+                       {(() => {
+                         const plugins = extractPluginOutputs(m);
+                        //  console.log('[Chatbot] 消息插件输出:', {
+                        //    messageId: m.id,
+                        //    messageRole: m.role,
+                        //    pluginCount: plugins.length,
+                        //    plugins: plugins,
+                        //  });
+                         
+                         return plugins.map((plugin) => {
+                           // console.log('[Chatbot] 处理插件:', plugin.toolName);
+                           const Renderer = PLUGIN_RENDERERS[plugin.toolName];
+                           // console.log('[Chatbot] 找到渲染器:', !!Renderer, 'for', plugin.toolName);
+                           // console.log('[Chatbot] 可用渲染器:', Object.keys(PLUGIN_RENDERERS));
+                           
+                           return Renderer ? (
+                             <Renderer
+                               key={plugin.toolCallId}
+                               result={plugin.result}
+                               toolName={plugin.toolName}
+                               toolCallId={plugin.toolCallId}
+                             />
+                           ) : null;
+                         });
+                       })()}
+
+                       {/* Render Text Content Only - NOW THIRD */}
                        <MessageRenderer
                          role="assistant"
                          content={messageContent}
