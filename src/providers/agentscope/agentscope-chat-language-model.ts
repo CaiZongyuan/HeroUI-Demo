@@ -20,8 +20,8 @@ import { z } from 'zod';
 
 import { assertObject, buildAgentScopeAPIError } from './agentscope-error';
 import {
-  type AgentScopeMessagePayload,
   convertToAgentScopeMessages,
+  type AgentScopeMessagePayload,
 } from './convert-to-agentscope-messages';
 import { mapAgentScopeFinishReason } from './map-agentscope-finish-reason';
 
@@ -80,7 +80,7 @@ export class AgentScopeChatLanguageModel implements LanguageModelV2 {
   constructor(
     readonly modelId: string,
     private readonly config: AgentScopeLanguageModelConfig,
-  ) {}
+  ) { }
 
   get provider() {
     return 'agentscope';
@@ -334,10 +334,11 @@ export class AgentScopeChatLanguageModel implements LanguageModelV2 {
 
     const usage = this.createBaseUsage();
     let finishReason: LanguageModelV2FinishReason = 'unknown';
-    let textStarted = false;
     let textId: string | undefined;
-    let hasText = false;
+    let reasoningId: string | undefined;
     let responseId: string | undefined;
+    const startedTextIds = new Set<string>();
+    const startedReasoningIds = new Set<string>();
 
     const stream = response.body
       .pipeThrough(new TextDecoderStream())
@@ -368,7 +369,44 @@ export class AgentScopeChatLanguageModel implements LanguageModelV2 {
               finishReason = mapAgentScopeFinishReason(status);
             }
 
-            if (parsed.object === 'response') {
+            const ensureTextId = (candidate?: string) => {
+              if (!textId) {
+                const normalizedCandidate = candidate?.trim() || undefined;
+                textId = normalizedCandidate ?? 'agentscope-text-0';
+              }
+              return textId;
+            };
+
+            const ensureReasoningId = (candidate?: string) => {
+              if (!reasoningId) {
+                const normalizedCandidate = candidate?.trim() || undefined;
+                reasoningId = normalizedCandidate ?? 'agentscope-reasoning-0';
+              }
+              return reasoningId;
+            };
+
+            const enqueueTextDelta = (deltaText: string, candidateId?: string) => {
+              const id = ensureTextId(candidateId);
+              if (!startedTextIds.has(id)) {
+                startedTextIds.add(id);
+                controller.enqueue({ type: 'text-start', id });
+              }
+              controller.enqueue({ type: 'text-delta', id, delta: deltaText });
+            };
+
+            const enqueueReasoningDelta = (deltaText: string, candidateId?: string) => {
+              const id = ensureReasoningId(candidateId);
+              if (!startedReasoningIds.has(id)) {
+                startedReasoningIds.add(id);
+                controller.enqueue({ type: 'reasoning-start', id });
+              }
+              controller.enqueue({ type: 'reasoning-delta', id, delta: deltaText });
+            };
+
+            const parsedObject = typeof parsed.object === 'string' ? parsed.object : undefined;
+            const isReasoningObject = parsedObject === 'reasoning' || parsed.type === 'reasoning';
+
+            if (parsedObject === 'response') {
               if (!responseId && typeof parsed.id === 'string') {
                 responseId = parsed.id;
                 controller.enqueue({
@@ -396,38 +434,60 @@ export class AgentScopeChatLanguageModel implements LanguageModelV2 {
               return;
             }
 
-            if (parsed.object === 'message') {
-              if (!textStarted && Array.isArray(parsed.content)) {
+            if (parsedObject === 'message') {
+              if (Array.isArray(parsed.content)) {
                 const text = this.extractTextFromMessage(parsed as AgentScopeMessage);
                 if (text) {
-                  textId = (parsed.id as string) || textId || 'agentscope-text-0';
-                  controller.enqueue({ type: 'text-start', id: textId });
-                  controller.enqueue({ type: 'text-delta', id: textId, delta: text });
-                  hasText = true;
-                  textStarted = true;
+                  const messageId = typeof parsed.id === 'string' ? parsed.id : undefined;
+                  if (isReasoningObject) {
+                    enqueueReasoningDelta(text, messageId);
+                  } else {
+                    enqueueTextDelta(text, messageId);
+                  }
                 }
               }
               return;
             }
 
-            if (parsed.object === 'content' || parsed.type === 'text') {
+            if (parsed.type === 'plugin_call_output') {
+              const toolName =
+                (parsed as Record<string, unknown>).name ||
+                (parsed as Record<string, unknown>).tool_name ||
+                'plugin_call_output';
+              const toolCallId =
+                (parsed as Record<string, unknown>).msg_id ||
+                (parsed as Record<string, unknown>).id ||
+                toolName ||
+                'tool-call';
+
+              controller.enqueue({
+                type: 'tool-result',
+                toolCallId: String(toolCallId),
+                toolName: String(toolName),
+                result: parsed,
+              });
+              return;
+            }
+
+            if (parsedObject === 'content' || parsed.type === 'text' || isReasoningObject) {
               const text = typeof parsed.text === 'string' ? parsed.text : undefined;
               if (text) {
                 const msgId = typeof parsed.msg_id === 'string' ? parsed.msg_id : undefined;
-                textId = msgId ?? textId ?? 'agentscope-text-0';
-                if (!textStarted) {
-                  controller.enqueue({ type: 'text-start', id: textId });
-                  textStarted = true;
+                if (isReasoningObject) {
+                  enqueueReasoningDelta(text, msgId);
+                } else {
+                  enqueueTextDelta(text, msgId);
                 }
-                controller.enqueue({ type: 'text-delta', id: textId, delta: text });
-                hasText = true;
               }
             }
           },
           flush: (controller) => {
-            if (textStarted && textId && hasText) {
-              controller.enqueue({ type: 'text-end', id: textId });
-            }
+            startedReasoningIds.forEach((id) => {
+              controller.enqueue({ type: 'reasoning-end', id });
+            });
+            startedTextIds.forEach((id) => {
+              controller.enqueue({ type: 'text-end', id });
+            });
             controller.enqueue({
               type: 'finish',
               finishReason,

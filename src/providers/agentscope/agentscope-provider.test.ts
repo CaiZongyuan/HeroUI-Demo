@@ -4,6 +4,17 @@ import { describe, expect, it } from 'bun:test';
 import { AgentScopeChatLanguageModel } from './agentscope-chat-language-model';
 import { convertToAgentScopeMessages } from './convert-to-agentscope-messages';
 
+async function readAllStreamParts(stream: ReadableStream<any>) {
+  const reader = stream.getReader();
+  const parts: unknown[] = [];
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    parts.push(value);
+  }
+  return parts;
+}
+
 describe('convertToAgentScopeMessages', () => {
   it('converts system/user messages', () => {
     const prompt = [
@@ -35,6 +46,26 @@ describe('convertToAgentScopeMessages', () => {
       type: 'image',
       image_url: 'http://localhost/img.png',
     });
+  });
+
+  it('ignores unsupported assistant parts but keeps reasoning as text', () => {
+    const prompt = [
+      {
+        role: 'assistant' as const,
+        content: [
+          { type: 'reasoning' as const, text: 'thinking...' },
+          { type: 'tool-result' as const, toolName: 'demo', result: { ok: true } },
+          { type: 'text' as const, text: 'final answer' },
+        ],
+      },
+    ];
+
+    const messages = convertToAgentScopeMessages(prompt);
+    expect(messages).toHaveLength(1);
+    expect(messages[0].content).toEqual([
+      { type: 'text', text: 'thinking...' },
+      { type: 'text', text: 'final answer' },
+    ]);
   });
 });
 
@@ -113,18 +144,101 @@ describe('AgentScopeChatLanguageModel', () => {
     });
 
     const { stream } = await model.doStream({ prompt });
-    const reader = stream.getReader();
-    const parts: unknown[] = [];
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      parts.push(value);
-    }
+    const parts = await readAllStreamParts(stream);
 
     const textDelta = parts.find((p: any) => p?.type === 'text-delta');
     const finish = parts.find((p: any) => p?.type === 'finish');
     expect(textDelta?.delta).toBe('hello');
     expect(finish?.finishReason).toBe('stop');
     expect(finish?.usage?.totalTokens).toBe(2);
+  });
+
+  it('keeps text ids stable when message and content ids differ', async () => {
+    const sseText = [
+      'event: message',
+      'data: {"object":"message","id":"","status":"completed","content":[{"type":"text","text":"hello"}]}',
+      '',
+      'event: text',
+      'data: {"object":"content","type":"text","status":"in_progress","delta":true,"text":" world","msg_id":"msg_2"}',
+      '',
+      'event: response',
+      'data: {"id":"resp_1","object":"response","status":"completed"}',
+      '',
+      '',
+    ]
+      .join('\n')
+      .concat('\n');
+
+    const sseStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(sseText));
+        controller.close();
+      },
+    });
+
+    const mockFetch: typeof fetch = async () =>
+      new Response(sseStream, {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
+
+    const model = new AgentScopeChatLanguageModel('test-model', {
+      baseURL: 'http://localhost:8000',
+      streamPath: '/stream',
+      processPath: '/process',
+      userId: 'u1',
+      fetch: mockFetch,
+    });
+
+    const { stream } = await model.doStream({ prompt });
+    const parts = await readAllStreamParts(stream);
+    const textStarts = parts.filter((p: any) => p?.type === 'text-start');
+    const textDeltas = parts.filter((p: any) => p?.type === 'text-delta');
+    expect(textStarts).toHaveLength(1);
+    expect(textDeltas.length).toBeGreaterThan(0);
+    expect(textDeltas.every((delta: any) => delta.id === textStarts[0].id)).toBe(true);
+  });
+
+  it('emits reasoning chunks with reasoning parts', async () => {
+    const sseText = [
+      'event: text',
+      'data: {"object":"reasoning","type":"text","status":"in_progress","delta":true,"text":"thinking","msg_id":"msg_r"}',
+      '',
+      'event: response',
+      'data: {"id":"resp_2","object":"response","status":"completed"}',
+      '',
+      '',
+    ]
+      .join('\n')
+      .concat('\n');
+
+    const sseStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(sseText));
+        controller.close();
+      },
+    });
+
+    const mockFetch: typeof fetch = async () =>
+      new Response(sseStream, {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
+
+    const model = new AgentScopeChatLanguageModel('test-model', {
+      baseURL: 'http://localhost:8000',
+      streamPath: '/stream',
+      processPath: '/process',
+      userId: 'u1',
+      fetch: mockFetch,
+    });
+
+    const { stream } = await model.doStream({ prompt });
+    const parts = await readAllStreamParts(stream);
+    const reasoningStart = parts.find((p: any) => p?.type === 'reasoning-start');
+    const reasoningDelta = parts.find((p: any) => p?.type === 'reasoning-delta');
+    expect(reasoningStart?.id).toBeDefined();
+    expect(reasoningDelta?.id).toBe(reasoningStart?.id);
+    expect(reasoningDelta?.delta).toBe('thinking');
   });
 });
