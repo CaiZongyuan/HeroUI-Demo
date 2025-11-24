@@ -3,18 +3,18 @@ import { convertUint8ArrayToBase64 } from '@ai-sdk/provider-utils';
 
 export type AgentScopeContent =
   | {
-    type: 'text';
-    text: string;
-  }
+      type: 'text';
+      text: string;
+    }
   | {
-    type: 'image';
-    image_url: string;
-  }
+      type: 'image';
+      image_url: string;
+    }
   | {
-    type: 'file';
-    file_data: string;
-    filename?: string;
-  };
+      type: 'file';
+      file_data: string;
+      filename?: string;
+    };
 
 export interface AgentScopeMessagePayload {
   object?: 'message';
@@ -110,10 +110,57 @@ export function convertToAgentScopeMessages(prompt: LanguageModelV2Prompt): Agen
           content,
         };
       }
+      case 'tool': {
+        const toolMessage = message as Extract<
+          LanguageModelV2Prompt[number],
+          { role: 'tool' }
+        >;
+        const content: AgentScopeContent[] = [];
+
+        const toolParts = toolMessage.content as Array<{
+          type: string;
+          toolCallId?: string;
+          toolName?: string;
+          output?: unknown;
+          error?: unknown;
+        }>;
+
+        toolParts.forEach((part) => {
+          switch (part.type) {
+            case 'tool-result': {
+              const prefix = `[tool:${part.toolCallId ?? part.toolName ?? 'unknown'}]`;
+              const payload =
+                typeof part.output === 'string' ? part.output : JSON.stringify(part.output);
+              content.push(toTextContent(`${prefix} ${payload}`));
+              break;
+            }
+            case 'tool-error': {
+              const prefix = `[tool-error:${part.toolCallId ?? part.toolName ?? 'unknown'}]`;
+              const payload =
+                typeof part.error === 'string' ? part.error : JSON.stringify(part.error);
+              content.push(toTextContent(`${prefix} ${payload}`));
+              break;
+            }
+            default:
+              break;
+          }
+        });
+
+        if (content.length === 0) {
+          content.push(toTextContent(''));
+        }
+
+        return {
+          object: 'message',
+          type: 'message',
+          role: 'tool',
+          content,
+        };
+      }
       default:
         throw new InvalidArgumentError({
           argument: 'prompt',
-          message: `Unsupported message role: ${message.role}`,
+          message: `Unsupported message role: ${(message as { role?: string }).role}`,
         });
     }
   });

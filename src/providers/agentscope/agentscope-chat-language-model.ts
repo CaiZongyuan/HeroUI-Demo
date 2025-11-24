@@ -20,8 +20,8 @@ import { z } from 'zod';
 
 import { assertObject, buildAgentScopeAPIError } from './agentscope-error';
 import {
-  convertToAgentScopeMessages,
   type AgentScopeMessagePayload,
+  convertToAgentScopeMessages,
 } from './convert-to-agentscope-messages';
 import { mapAgentScopeFinishReason } from './map-agentscope-finish-reason';
 
@@ -80,7 +80,7 @@ export class AgentScopeChatLanguageModel implements LanguageModelV2 {
   constructor(
     readonly modelId: string,
     private readonly config: AgentScopeLanguageModelConfig,
-  ) { }
+  ) {}
 
   get provider() {
     return 'agentscope';
@@ -339,6 +339,113 @@ export class AgentScopeChatLanguageModel implements LanguageModelV2 {
     let responseId: string | undefined;
     const startedTextIds = new Set<string>();
     const startedReasoningIds = new Set<string>();
+    const startedToolCalls = new Set<string>();
+    const warnedUnknownEvents = new Set<string>();
+    const warnOnce = (key: string, message: string) => {
+      if (warnedUnknownEvents.has(key)) {
+        return;
+      }
+      warnedUnknownEvents.add(key);
+      // 记录未覆盖的事件，便于后续补充解析逻辑
+      console.warn(message);
+    };
+    const ensureToolCallStarted = (
+      controller: TransformStreamDefaultController<LanguageModelV2StreamPart>,
+      toolCallId: string,
+      toolName: string,
+      input?: string,
+    ) => {
+      if (startedToolCalls.has(toolCallId)) {
+        return;
+      }
+      startedToolCalls.add(toolCallId);
+      // 直接推送一个 tool-call，确保后续 tool-result/tool-error 不会因缺少前置信息而报错
+      controller.enqueue({
+        type: 'tool-call',
+        toolCallId,
+        toolName,
+        input: input ?? '',
+        providerExecuted: true,
+      });
+    };
+    const asString = (value: unknown): string | undefined =>
+      typeof value === 'string' && value.trim() ? value : undefined;
+    const normalizeToolInput = (raw: unknown): string => {
+      if (typeof raw === 'string') {
+        return raw;
+      }
+      if (raw == null) {
+        return '';
+      }
+      try {
+        return JSON.stringify(raw);
+      } catch {
+        return String(raw);
+      }
+    };
+    const extractToolMeta = (payload: Record<string, unknown>, eventName?: string) => {
+      let contentToolName: string | undefined;
+      let contentToolId: string | undefined;
+      let contentInput: unknown;
+      let contentResult: unknown;
+
+      if (Array.isArray(payload.content)) {
+        for (const item of payload.content) {
+          if (!item || typeof item !== 'object') {
+            continue;
+          }
+          const recordItem = item as Record<string, unknown>;
+          const data = recordItem.data;
+          if (!data || typeof data !== 'object') {
+            continue;
+          }
+          const dataRecord = data as Record<string, unknown>;
+          contentToolName =
+            contentToolName ??
+            asString(dataRecord.name) ??
+            asString(dataRecord.tool_name);
+          contentToolId =
+            contentToolId ??
+            asString(dataRecord.id) ??
+            asString(dataRecord.call_id);
+          contentInput =
+            contentInput ??
+            (dataRecord.input ?? dataRecord.arguments ?? dataRecord.params);
+          contentResult = contentResult ?? dataRecord.output ?? dataRecord.result;
+        }
+      }
+
+      const toolName =
+        asString(payload.name) ??
+        asString(payload.tool_name) ??
+        contentToolName ??
+        eventName ??
+        'plugin_call';
+      const toolCallId =
+        asString(payload.msg_id) ??
+        asString(payload.call_id) ??
+        asString(payload.id) ??
+        contentToolId ??
+        toolName ??
+        'tool-call';
+
+      return {
+        toolName,
+        toolCallId,
+        input:
+          payload.arguments ??
+          payload.params ??
+          payload.input ??
+          payload.data ??
+          contentInput,
+        result: payload.output ?? payload.result ?? payload.data ?? contentResult,
+      };
+    };
+    const resolveEventKind = (
+      payload: Record<string, unknown>,
+      eventName?: string,
+    ): string | undefined =>
+      asString(payload.type) ?? asString(payload.object) ?? eventName;
 
     const stream = response.body
       .pipeThrough(new TextDecoderStream())
@@ -403,10 +510,14 @@ export class AgentScopeChatLanguageModel implements LanguageModelV2 {
               controller.enqueue({ type: 'reasoning-delta', id, delta: deltaText });
             };
 
+            const parsedRecord = parsed as Record<string, unknown>;
+            const eventName = typeof event.event === 'string' ? event.event : undefined;
+            const eventKind = resolveEventKind(parsedRecord, eventName);
             const parsedObject = typeof parsed.object === 'string' ? parsed.object : undefined;
-            const isReasoningObject = parsedObject === 'reasoning' || parsed.type === 'reasoning';
+            const isReasoningObject =
+              eventKind === 'reasoning' || parsedObject === 'reasoning' || parsed.type === 'reasoning';
 
-            if (parsedObject === 'response') {
+            if (eventKind === 'response' || parsedObject === 'response') {
               if (!responseId && typeof parsed.id === 'string') {
                 responseId = parsed.id;
                 controller.enqueue({
@@ -434,7 +545,7 @@ export class AgentScopeChatLanguageModel implements LanguageModelV2 {
               return;
             }
 
-            if (parsedObject === 'message') {
+            if (eventKind === 'message' || parsedObject === 'message') {
               if (Array.isArray(parsed.content)) {
                 const text = this.extractTextFromMessage(parsed as AgentScopeMessage);
                 if (text) {
@@ -449,27 +560,52 @@ export class AgentScopeChatLanguageModel implements LanguageModelV2 {
               return;
             }
 
-            if (parsed.type === 'plugin_call_output') {
-              const toolName =
-                (parsed as Record<string, unknown>).name ||
-                (parsed as Record<string, unknown>).tool_name ||
-                'plugin_call_output';
-              const toolCallId =
-                (parsed as Record<string, unknown>).msg_id ||
-                (parsed as Record<string, unknown>).id ||
-                toolName ||
-                'tool-call';
+            if (eventKind === 'plugin_call_output') {
+              const toolMeta = extractToolMeta(parsedRecord, eventName);
+              ensureToolCallStarted(
+                controller,
+                String(toolMeta.toolCallId),
+                String(toolMeta.toolName ?? 'plugin_call_output'),
+              );
 
               controller.enqueue({
                 type: 'tool-result',
-                toolCallId: String(toolCallId),
-                toolName: String(toolName),
-                result: parsed,
+                toolCallId: String(toolMeta.toolCallId),
+                toolName: String(toolMeta.toolName ?? 'plugin_call_output'),
+                result: toolMeta.result ?? parsed,
+                providerExecuted: true,
               });
               return;
             }
 
-            if (parsedObject === 'content' || parsed.type === 'text' || isReasoningObject) {
+            if (eventKind === 'plugin_call') {
+              const toolMeta = extractToolMeta(parsedRecord, eventName);
+              const input = normalizeToolInput(toolMeta.input);
+              ensureToolCallStarted(
+                controller,
+                String(toolMeta.toolCallId),
+                String(toolMeta.toolName ?? 'plugin_call'),
+                input,
+              );
+
+              controller.enqueue({
+                type: 'tool-call',
+                toolCallId: String(toolMeta.toolCallId),
+                toolName: String(toolMeta.toolName ?? 'plugin_call'),
+                input,
+                providerExecuted: true,
+              });
+              return;
+            }
+
+            if (
+              eventKind === 'content' ||
+              eventKind === 'text' ||
+              eventKind === 'reasoning' ||
+              parsedObject === 'content' ||
+              parsed.type === 'text' ||
+              isReasoningObject
+            ) {
               const text = typeof parsed.text === 'string' ? parsed.text : undefined;
               if (text) {
                 const msgId = typeof parsed.msg_id === 'string' ? parsed.msg_id : undefined;
@@ -479,7 +615,11 @@ export class AgentScopeChatLanguageModel implements LanguageModelV2 {
                   enqueueTextDelta(text, msgId);
                 }
               }
+              return;
             }
+
+            const unknownKey = eventKind || parsedObject || parsed.type || eventName || 'unknown';
+            warnOnce(String(unknownKey), `AgentScope SSE 未处理的事件类型: ${String(unknownKey)}`);
           },
           flush: (controller) => {
             startedReasoningIds.forEach((id) => {
