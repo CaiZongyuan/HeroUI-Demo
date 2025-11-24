@@ -30,7 +30,8 @@ export default function App() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedMessageLogs, setSelectedMessageLogs] = useState<any[]>([]);
   const [selectedMessageTime, setSelectedMessageTime] = useState("");
-
+  const runtimeUserId = process.env.NEXT_PUBLIC_AGENTSCOPE_USER_ID ?? 'user-ios';
+  
   // Function to refresh sessions list
   const refreshSessions = async () => {
     try {
@@ -103,20 +104,26 @@ export default function App() {
     currentSessionIdRef.current = currentSessionId;
   }, [currentSessionId]);
 
+  
   const { messages, error, sendMessage, setMessages, status } = useChat({
+
+
     transport: new DefaultChatTransport({
       fetch: expoFetch as unknown as typeof globalThis.fetch,
       api: generateAPIUrl("/api/chat"),
+      body: {
+        userId: runtimeUserId,
+      },
     }),
     onError: (error) => console.error(error, "ERROR"),
     onFinish: async ({ message }) => {
       const sessionId = currentSessionIdRef.current;
-      
+
       if (!sessionId) {
         console.log("No current session ID in onFinish");
         return;
       }
-      
+
       // Save assistant message
       try {
         await db.insert(chatMessages).values({
@@ -189,7 +196,14 @@ export default function App() {
         createdAt: new Date(),
       });
 
-      sendMessage({ text: userMessageContent });
+      sendMessage(
+        { text: userMessageContent },
+        {
+          body: {
+            sessionId: currentSessionId,
+          },
+        }
+      );
     } catch (e) {
       console.error("Failed to save user message", e);
     }

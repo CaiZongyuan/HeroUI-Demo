@@ -14,8 +14,8 @@ export async function POST(req: Request) {
         messages: convertToModelMessages(messages),
         providerOptions: {
             agentscope: {
-                userId: userId ?? 'demo-user1',
-                sessionId: sessionId ?? 'demo-session1',
+                userId: userId ?? 'wk-ios',
+                sessionId: sessionId ?? 'test01',
             },
         },
     });

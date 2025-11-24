@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Modal, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
 import { GroupedLog } from '../utils/message-utils';
 import { AccordionSection } from './AccordionSection';
-
 interface ThinkingLogModalProps {
   visible: boolean;
   onClose: () => void;
