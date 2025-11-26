@@ -13,7 +13,7 @@ import { useChat } from "@ai-sdk/react";
 import { Ionicons } from "@expo/vector-icons";
 import { DefaultChatTransport } from "ai";
 import { asc, desc, eq, isNull } from "drizzle-orm";
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { fetch as expoFetch } from "expo/fetch";
@@ -162,7 +162,7 @@ export default function App() {
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 0.5,
         base64: true,
@@ -214,27 +214,30 @@ export default function App() {
       console.error("Failed to update session title", e);
     }
 
-    // Process images for DB storage (save to persistent storage)
-    const savedImages = await Promise.all(currentImages.map(async (img) => {
-      try {
-        // @ts-ignore
-        if (!FileSystem.documentDirectory) {
-            console.warn("FileSystem.documentDirectory is null");
-            return img;
-        }
-        const filename = img.uri.split('/').pop() || `image-${Date.now()}.jpg`;
-        // @ts-ignore
-        const newPath = `${FileSystem.documentDirectory}${filename}`;
-        await FileSystem.copyAsync({
-          from: img.uri,
-          to: newPath
-        });
-        return { ...img, uri: newPath };
-      } catch (e) {
-        console.error("Failed to save image locally", e);
-        return img; // Fallback to original URI
+  const savedImages = await Promise.all(currentImages.map(async (img) => {
+    try {
+      // ✅ 正确：FileSystem.documentDirectory 可能为 null，需要检查
+      const docDir = FileSystem.documentDirectory;
+      
+      if (!docDir) {
+        console.warn("FileSystem.documentDirectory is not available");
+        return img;
       }
-    }));
+      
+      const filename = img.uri.split('/').pop() || `image-${Date.now()}.jpg`;
+      const newPath = `${docDir}${filename}`;
+      
+      await FileSystem.copyAsync({
+        from: img.uri,
+        to: newPath
+      });
+      
+      return { ...img, uri: newPath };
+    } catch (e) {
+      console.error("Failed to save image locally", e);
+      return img;
+    }
+  }));
 
     // Construct message parts for DB (using local URIs)
     const dbMessageParts = [
