@@ -4,22 +4,40 @@ import { PLUGIN_RENDERERS } from "@/src/components/plugin-renderers";
 import { ThinkingIndicator } from "@/src/components/ThinkingIndicator";
 import { ThinkingLogModal } from "@/src/components/ThinkingLogModal";
 import { ThoughtsButton } from "@/src/components/ThoughtsButton";
+import { ToolPartsRenderer } from "@/src/components/tooluse";
 import { db } from "@/src/db/client";
 import { chatMessages, chatSessions } from "@/src/db/schema";
 import { currentSessionIdAtom, sessionsAtom } from "@/src/store/chat-session";
 import { generateAPIUrl } from "@/src/utils/expoUrl";
-import { calculateThinkingTime, extractActiveThinkingInfo, extractCurrentActivity, extractPluginOutputs, groupThinkingLogs, hasThinkingLogs } from "@/src/utils/message-utils";
+import {
+  calculateThinkingTime,
+  extractActiveThinkingInfo,
+  extractCurrentActivity,
+  extractPluginOutputs,
+  groupThinkingLogs,
+  hasThinkingLogs,
+} from "@/src/utils/message-utils";
 import { useChat } from "@ai-sdk/react";
 import { Ionicons } from "@expo/vector-icons";
-import { DefaultChatTransport } from "ai";
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from "ai";
 import { asc, desc, eq, isNull } from "drizzle-orm";
-import * as FileSystem from 'expo-file-system/legacy';
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from "expo-file-system/legacy";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { fetch as expoFetch } from "expo/fetch";
 import { useAtom, useAtomValue } from "jotai";
-import { useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -42,8 +60,9 @@ export default function App() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedMessageLogs, setSelectedMessageLogs] = useState<any[]>([]);
   const [selectedMessageTime, setSelectedMessageTime] = useState("");
-  const runtimeUserId = process.env.NEXT_PUBLIC_AGENTSCOPE_USER_ID ?? 'user-ios';
-  
+  const runtimeUserId =
+    process.env.NEXT_PUBLIC_AGENTSCOPE_USER_ID ?? "user-ios";
+
   // Function to refresh sessions list
   const refreshSessions = async () => {
     try {
@@ -77,18 +96,22 @@ export default function App() {
               try {
                 // Parse the stored JSON message
                 const parsedMessage = JSON.parse(msg.message as string);
-                
+
                 // Sanitize message structure
                 const sanitizedMessage = {
                   ...parsedMessage,
                   id: msg.id, // Ensure we use the DB ID
-                  parts: Array.isArray(parsedMessage.parts) ? parsedMessage.parts : undefined,
-                  content: parsedMessage.content || '',
+                  parts: Array.isArray(parsedMessage.parts)
+                    ? parsedMessage.parts
+                    : undefined,
+                  content: parsedMessage.content || "",
                 };
 
                 // If parts are missing but content exists, create text part (optional but good for consistency)
                 if (!sanitizedMessage.parts && sanitizedMessage.content) {
-                   sanitizedMessage.parts = [{ type: 'text', text: sanitizedMessage.content }];
+                  sanitizedMessage.parts = [
+                    { type: "text", text: sanitizedMessage.content },
+                  ];
                 }
 
                 return sanitizedMessage;
@@ -99,7 +122,6 @@ export default function App() {
             })
             .filter((msg) => msg !== null)
         );
-        
       } catch (e) {
         console.error("Failed to load history", e);
       } finally {
@@ -116,39 +138,68 @@ export default function App() {
     currentSessionIdRef.current = currentSessionId;
   }, [currentSessionId]);
 
-  
-  const { messages, error, sendMessage, setMessages, status } = useChat({
+  const { messages, error, sendMessage, setMessages, status, addToolOutput } =
+    useChat({
+      transport: new DefaultChatTransport({
+        fetch: expoFetch as unknown as typeof globalThis.fetch,
+        api: generateAPIUrl("/api/chat"),
+        body: {
+          userId: runtimeUserId,
+        },
+      }),
+      onError: (error) => console.error(error, "ERROR"),
+      onFinish: async ({ message }) => {
+        const sessionId = currentSessionIdRef.current;
 
+        if (!sessionId) {
+          console.log("No current session ID in onFinish");
+          return;
+        }
 
-    transport: new DefaultChatTransport({
-      fetch: expoFetch as unknown as typeof globalThis.fetch,
-      api: generateAPIUrl("/api/chat"),
-      body: {
-        userId: runtimeUserId,
+        // Save assistant message
+        try {
+          await db
+            .insert(chatMessages)
+            .values({
+              id: message.id,
+              sessionId: sessionId,
+              message: JSON.stringify(message),
+              createdAt: new Date(),
+            })
+            .onConflictDoUpdate({
+              target: chatMessages.id,
+              set: { message: JSON.stringify(message) },
+            });
+        } catch (e) {
+          console.error("Failed to save assistant message", e);
+        }
       },
-    }),
-    onError: (error) => console.error(error, "ERROR"),
-    onFinish: async ({ message }) => {
-      const sessionId = currentSessionIdRef.current;
 
-      if (!sessionId) {
-        console.log("No current session ID in onFinish");
-        return;
-      }
+      sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
 
-      // Save assistant message
-      try {
-        await db.insert(chatMessages).values({
-          id: message.id,
-          sessionId: sessionId,
-          message: JSON.stringify(message),
-          createdAt: new Date(),
-        });
-      } catch (e) {
-        console.error("Failed to save assistant message", e);
-      }
-    },
-  });
+      // run client-side tools that are automatically executed:
+      async onToolCall({ toolCall }) {
+        // 先检查是否为动态工具（dynamic tool），若是则跳过（由后端处理）
+        if ((toolCall as any).dynamic) {
+          return;
+        }
+        if (toolCall.toolName === "getLocation") {
+          const cities = [
+            "New York",
+            "Los Angeles",
+            "Chicago",
+            "San Francisco",
+          ];
+
+          // No await - avoids potential deadlocks
+          addToolOutput({
+            tool: "getLocation",
+            toolCallId: toolCall.toolCallId,
+            output: cities[Math.floor(Math.random() * cities.length)],
+          });
+        }
+      },
+    });
 
   // Sync initialMessages to useChat
   useEffect(() => {
@@ -162,19 +213,19 @@ export default function App() {
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ["images"],
         allowsEditing: false,
         quality: 0.5,
         base64: true,
       });
 
       if (!result.canceled) {
-        const newImages = result.assets.map(asset => ({
+        const newImages = result.assets.map((asset) => ({
           uri: asset.uri,
           base64: asset.base64,
-          mimeType: asset.mimeType || 'image/jpeg',
+          mimeType: asset.mimeType || "image/jpeg",
         }));
-        setSelectedImages(prev => [...prev, ...newImages]);
+        setSelectedImages((prev) => [...prev, ...newImages]);
       }
     } catch (e) {
       console.error("Failed to pick image", e);
@@ -182,12 +233,13 @@ export default function App() {
   };
 
   const removeImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Save user messages
   const handleSend = async () => {
-    if ((!input.trim() && selectedImages.length === 0) || !currentSessionId) return;
+    if ((!input.trim() && selectedImages.length === 0) || !currentSessionId)
+      return;
 
     const userMessageContent = input;
     const currentImages = [...selectedImages];
@@ -196,11 +248,14 @@ export default function App() {
 
     // Update session title to first message if it's still the default "New Chat" title
     try {
-      const currentSession = sessions.find(s => s.id === currentSessionId);
-      if (currentSession && currentSession.title.startsWith('New Chat')) {
-        const newTitle = userMessageContent.length > 0 
-          ? (userMessageContent.length > 30 ? userMessageContent.substring(0, 30) + "..." : userMessageContent)
-          : "Image Message";
+      const currentSession = sessions.find((s) => s.id === currentSessionId);
+      if (currentSession && currentSession.title.startsWith("New Chat")) {
+        const newTitle =
+          userMessageContent.length > 0
+            ? userMessageContent.length > 30
+              ? userMessageContent.substring(0, 30) + "..."
+              : userMessageContent
+            : "Image Message";
 
         await db
           .update(chatSessions)
@@ -214,46 +269,51 @@ export default function App() {
       console.error("Failed to update session title", e);
     }
 
-  const savedImages = await Promise.all(currentImages.map(async (img) => {
-    try {
-      // ✅ 正确：FileSystem.documentDirectory 可能为 null，需要检查
-      const docDir = FileSystem.documentDirectory;
-      
-      if (!docDir) {
-        console.warn("FileSystem.documentDirectory is not available");
-        return img;
-      }
-      
-      const filename = img.uri.split('/').pop() || `image-${Date.now()}.jpg`;
-      const newPath = `${docDir}${filename}`;
-      
-      await FileSystem.copyAsync({
-        from: img.uri,
-        to: newPath
-      });
-      
-      return { ...img, uri: newPath };
-    } catch (e) {
-      console.error("Failed to save image locally", e);
-      return img;
-    }
-  }));
+    const savedImages = await Promise.all(
+      currentImages.map(async (img) => {
+        try {
+          // ✅ 正确：FileSystem.documentDirectory 可能为 null，需要检查
+          const docDir = FileSystem.documentDirectory;
+
+          if (!docDir) {
+            console.warn("FileSystem.documentDirectory is not available");
+            return img;
+          }
+
+          const filename =
+            img.uri.split("/").pop() || `image-${Date.now()}.jpg`;
+          const newPath = `${docDir}${filename}`;
+
+          await FileSystem.copyAsync({
+            from: img.uri,
+            to: newPath,
+          });
+
+          return { ...img, uri: newPath };
+        } catch (e) {
+          console.error("Failed to save image locally", e);
+          return img;
+        }
+      })
+    );
 
     // Construct message parts for DB (using local URIs)
     const dbMessageParts = [
-      ...savedImages.map(img => ({
-        type: 'file',
+      ...savedImages.map((img) => ({
+        type: "file",
         mediaType: img.mimeType,
         url: img.uri,
       })),
-      ...(userMessageContent ? [{ type: 'text', text: userMessageContent }] : [])
+      ...(userMessageContent
+        ? [{ type: "text", text: userMessageContent }]
+        : []),
     ];
 
     // Construct message parts for AI SDK (using base64)
-    const aiMessageFiles = currentImages.map(img => ({
-      type: 'file' as const,
-      mediaType: img.mimeType || 'image/jpeg',
-      url: `data:${img.mimeType || 'image/jpeg'};base64,${img.base64}`,
+    const aiMessageFiles = currentImages.map((img) => ({
+      type: "file" as const,
+      mediaType: img.mimeType || "image/jpeg",
+      url: `data:${img.mimeType || "image/jpeg"};base64,${img.base64}`,
     }));
 
     const messageId = Math.random().toString(36).substring(7);
@@ -273,9 +333,9 @@ export default function App() {
       });
 
       sendMessage(
-        { 
+        {
           text: userMessageContent,
-          files: aiMessageFiles.length > 0 ? aiMessageFiles : undefined
+          files: aiMessageFiles.length > 0 ? aiMessageFiles : undefined,
         },
         {
           body: {
@@ -303,13 +363,16 @@ export default function App() {
   if (error) return <Text>{error.message}</Text>;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }} edges={["bottom"]}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: "#000000" }}
+      edges={["bottom"]}
+    >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
       >
-        <View className="flex-1" style={{ backgroundColor: '#000000' }}>
+        <View className="flex-1" style={{ backgroundColor: "#000000" }}>
           <ScrollView
             ref={scrollViewRef}
             style={{ flex: 1, paddingHorizontal: 8 }}
@@ -324,25 +387,31 @@ export default function App() {
           >
             {messages.map((m, index) => {
               const isLastMessage = index === messages.length - 1;
-              const isStreaming = status === 'streaming' || status === 'submitted';
-              const showThinkingIndicator = isLastMessage && isStreaming && m.role === 'assistant';
-              
+              const isStreaming =
+                status === "streaming" || status === "submitted";
+              const showThinkingIndicator =
+                isLastMessage && isStreaming && m.role === "assistant";
+
               // Helper to extract text content from parts
               const getTextContent = (message: any) => {
                 if (message.parts) {
                   return message.parts
-                    .filter((part: any) => part.type === 'text')
+                    .filter((part: any) => part.type === "text")
                     .map((part: any) => part.text)
-                    .join('');
+                    .join("");
                 }
-                return message.content || '';
+                return message.content || "";
               };
 
               // Helper to extract images from parts
               const getImages = (message: any) => {
                 if (message.parts) {
                   return message.parts
-                    .filter((part: any) => part.type === 'file' && part.mediaType?.startsWith('image/'))
+                    .filter(
+                      (part: any) =>
+                        part.type === "file" &&
+                        part.mediaType?.startsWith("image/")
+                    )
                     .map((part: any) => ({ uri: part.url }));
                 }
                 return [];
@@ -353,66 +422,73 @@ export default function App() {
 
               return (
                 <View key={m.id}>
-                  {m.role === 'user' ? (
-                     <MessageRenderer
-                       role="user"
-                       content={messageContent}
-                       images={messageImages}
-                     />
+                  {m.role === "user" ? (
+                    <MessageRenderer
+                      role="user"
+                      content={messageContent}
+                      images={messageImages}
+                    />
                   ) : (
                     <View>
-                       {/* Active Thinking Card (Streaming) */}
-                       {showThinkingIndicator && (
-                         (() => {
-                           const activeInfo = extractActiveThinkingInfo(m);
-                           return activeInfo ? (
-                             <ActiveThinkingCard 
-                               title={activeInfo.title}
-                               content={activeInfo.content}
-                               type={activeInfo.type}
-                             />
-                           ) : (
-                             <ThinkingIndicator status={extractCurrentActivity(m)} />
-                           );
-                         })()
-                       )}
+                      {/* Active Thinking Card (Streaming) */}
+                      {showThinkingIndicator &&
+                        (() => {
+                          const activeInfo = extractActiveThinkingInfo(m);
+                          return activeInfo ? (
+                            <ActiveThinkingCard
+                              title={activeInfo.title}
+                              content={activeInfo.content}
+                              type={activeInfo.type}
+                            />
+                          ) : (
+                            <ThinkingIndicator
+                              status={extractCurrentActivity(m)}
+                            />
+                          );
+                        })()}
 
-                       {/* Thoughts Button (Finished) */}
-                       {!isStreaming && m.role === 'assistant' && hasThinkingLogs(m) && (
-                         <ThoughtsButton onPress={() => handleShowLogs(m)} />
-                       )}
+                      {/* Thoughts Button (Finished) */}
+                      {!isStreaming &&
+                        m.role === "assistant" &&
+                        hasThinkingLogs(m) && (
+                          <ThoughtsButton onPress={() => handleShowLogs(m)} />
+                        )}
 
-                       {/* Plugin Outputs - Custom UI Cards */}
-                       {(() => {
-                         const plugins = extractPluginOutputs(m);
-                         
-                         return plugins.map((plugin) => {
-                           const Renderer = PLUGIN_RENDERERS[plugin.toolName];
-                           
-                           return Renderer ? (
-                             <Renderer
-                               key={plugin.toolCallId}
-                               result={plugin.result}
-                               toolName={plugin.toolName}
-                               toolCallId={plugin.toolCallId}
-                             />
-                           ) : null;
-                         });
-                       })()}
+                      {/* Plugin Outputs - Custom UI Cards */}
+                      {(() => {
+                        const plugins = extractPluginOutputs(m);
 
-                       {/* Render Text Content Only */}
-                       <MessageRenderer
-                         role="assistant"
-                         content={messageContent}
-                         images={messageImages}
-                       />
+                        return plugins.map((plugin) => {
+                          const Renderer = PLUGIN_RENDERERS[plugin.toolName];
+
+                          return Renderer ? (
+                            <Renderer
+                              key={plugin.toolCallId}
+                              result={plugin.result}
+                              toolName={plugin.toolName}
+                              toolCallId={plugin.toolCallId}
+                            />
+                          ) : null;
+                        });
+                      })()}
+
+                      {/* Client-side Tool Parts */}
+                      <ToolPartsRenderer
+                        parts={m.parts || []}
+                        addToolOutput={addToolOutput}
+                      />
+
+                      {/* Render Text Content Only */}
+                      <MessageRenderer
+                        role="assistant"
+                        content={messageContent}
+                        images={messageImages}
+                      />
                     </View>
                   )}
                 </View>
               );
             })}
-
-
           </ScrollView>
           <View
             style={{
@@ -425,9 +501,16 @@ export default function App() {
             }}
           >
             {selectedImages.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginBottom: 12 }}
+              >
                 {selectedImages.map((img, index) => (
-                  <View key={index} style={{ marginRight: 8, position: 'relative' }}>
+                  <View
+                    key={index}
+                    style={{ marginRight: 8, position: "relative" }}
+                  >
                     <Image
                       source={{ uri: img.uri }}
                       style={{ width: 60, height: 60, borderRadius: 8 }}
@@ -436,17 +519,17 @@ export default function App() {
                     <TouchableOpacity
                       onPress={() => removeImage(index)}
                       style={{
-                        position: 'absolute',
+                        position: "absolute",
                         top: -6,
                         right: -6,
-                        backgroundColor: '#333',
+                        backgroundColor: "#333",
                         borderRadius: 10,
                         width: 20,
                         height: 20,
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        alignItems: "center",
+                        justifyContent: "center",
                         borderWidth: 1,
-                        borderColor: '#000',
+                        borderColor: "#000",
                       }}
                     >
                       <Ionicons name="close" size={12} color="#fff" />
@@ -455,16 +538,18 @@ export default function App() {
                 ))}
               </ScrollView>
             )}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+            >
               <TouchableOpacity
                 onPress={pickImage}
                 style={{
                   width: 40,
                   height: 40,
                   borderRadius: 20,
-                  backgroundColor: '#27272a',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  backgroundColor: "#27272a",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
                 <Ionicons name="camera-outline" size={24} color="#fff" />
@@ -479,7 +564,11 @@ export default function App() {
                   fontSize: 16,
                   color: "#fff",
                 }}
-                placeholder={currentSessionId ? "Say something..." : "Create a new chat to start"}
+                placeholder={
+                  currentSessionId
+                    ? "Say something..."
+                    : "Create a new chat to start"
+                }
                 placeholderTextColor="#666"
                 value={input}
                 onChangeText={setInput}
@@ -491,7 +580,7 @@ export default function App() {
             </View>
           </View>
         </View>
-        
+
         <ThinkingLogModal
           visible={isModalVisible}
           onClose={() => setIsModalVisible(false)}
