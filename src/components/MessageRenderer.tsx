@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { MarkedStyles, useMarkdown } from 'react-native-marked';
@@ -5,9 +6,10 @@ import { MarkedStyles, useMarkdown } from 'react-native-marked';
 interface MessageProps {
   role: 'user' | 'assistant';
   content: string;
+  images?: { uri: string }[];
 }
 
-export const MessageRenderer: React.FC<MessageProps> = ({ role, content }) => {
+export const MessageRenderer: React.FC<MessageProps> = ({ role, content, images }) => {
   // Custom styles that override defaults for Markdown elements
   const customStyles: MarkedStyles = StyleSheet.create({
     // Base text (paragraphs, spans, etc.)
@@ -106,10 +108,34 @@ export const MessageRenderer: React.FC<MessageProps> = ({ role, content }) => {
             maxWidth: '80%',
           }}
         >
+          {images && images.length > 0 && (
+            <View style={{ marginBottom: 8, gap: 8 }}>
+              {images.map((img, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: img.uri }}
+                  style={{ width: 200, height: 200, borderRadius: 8 }}
+                  contentFit="cover"
+                />
+              ))}
+            </View>
+          )}
           {markdownElements}
         </View>
       ) : (
         <View style={{ width: '100%' }}>
+          {images && images.length > 0 && (
+            <View style={{ marginBottom: 8, gap: 8 }}>
+              {images.map((img, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: img.uri }}
+                  style={{ width: 200, height: 200, borderRadius: 8 }}
+                  contentFit="cover"
+                />
+              ))}
+            </View>
+          )}
           {markdownElements}
         </View>
       )}

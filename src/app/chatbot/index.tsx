@@ -10,14 +10,24 @@ import { currentSessionIdAtom, sessionsAtom } from "@/src/store/chat-session";
 import { generateAPIUrl } from "@/src/utils/expoUrl";
 import { calculateThinkingTime, extractActiveThinkingInfo, extractCurrentActivity, extractPluginOutputs, groupThinkingLogs, hasThinkingLogs } from "@/src/utils/message-utils";
 import { useChat } from "@ai-sdk/react";
+import { Ionicons } from "@expo/vector-icons";
 import { DefaultChatTransport } from "ai";
 import { asc, desc, eq, isNull } from "drizzle-orm";
+import * as FileSystem from 'expo-file-system';
+import { Image } from 'expo-image';
+import * as ImagePicker from 'expo-image-picker';
 import { fetch as expoFetch } from "expo/fetch";
 import { useAtom, useAtomValue } from "jotai";
 import { useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+interface SelectedImage {
+  uri: string;
+  base64?: string | null;
+  mimeType?: string;
+}
 
 export default function App() {
   const [input, setInput] = useState("");
@@ -26,6 +36,7 @@ export default function App() {
   const [sessions, setSessions] = useAtom(sessionsAtom);
   const [initialMessages, setInitialMessages] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
 
   // Thinking Logs State
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -148,20 +159,48 @@ export default function App() {
     }
   }, [initialMessages, setMessages]);
 
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaType.Images,
+        allowsEditing: false,
+        quality: 0.5,
+        base64: true,
+      });
+
+      if (!result.canceled) {
+        const newImages = result.assets.map(asset => ({
+          uri: asset.uri,
+          base64: asset.base64,
+          mimeType: asset.mimeType || 'image/jpeg',
+        }));
+        setSelectedImages(prev => [...prev, ...newImages]);
+      }
+    } catch (e) {
+      console.error("Failed to pick image", e);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   // Save user messages
   const handleSend = async () => {
-    if (!input.trim() || !currentSessionId) return;
+    if ((!input.trim() && selectedImages.length === 0) || !currentSessionId) return;
 
     const userMessageContent = input;
+    const currentImages = [...selectedImages];
     setInput("");
+    setSelectedImages([]);
 
     // Update session title to first message if it's still the default "New Chat" title
     try {
       const currentSession = sessions.find(s => s.id === currentSessionId);
       if (currentSession && currentSession.title.startsWith('New Chat')) {
-        const newTitle = userMessageContent.length > 30
-          ? userMessageContent.substring(0, 30) + "..."
-          : userMessageContent;
+        const newTitle = userMessageContent.length > 0 
+          ? (userMessageContent.length > 30 ? userMessageContent.substring(0, 30) + "..." : userMessageContent)
+          : "Image Message";
 
         await db
           .update(chatSessions)
@@ -175,17 +214,50 @@ export default function App() {
       console.error("Failed to update session title", e);
     }
 
-    // Optimistically add user message is handled by useChat, but we need to save it
+    // Process images for DB storage (save to persistent storage)
+    const savedImages = await Promise.all(currentImages.map(async (img) => {
+      try {
+        // @ts-ignore
+        if (!FileSystem.documentDirectory) {
+            console.warn("FileSystem.documentDirectory is null");
+            return img;
+        }
+        const filename = img.uri.split('/').pop() || `image-${Date.now()}.jpg`;
+        // @ts-ignore
+        const newPath = `${FileSystem.documentDirectory}${filename}`;
+        await FileSystem.copyAsync({
+          from: img.uri,
+          to: newPath
+        });
+        return { ...img, uri: newPath };
+      } catch (e) {
+        console.error("Failed to save image locally", e);
+        return img; // Fallback to original URI
+      }
+    }));
+
+    // Construct message parts for DB (using local URIs)
+    const dbMessageParts = [
+      ...savedImages.map(img => ({
+        type: 'file',
+        mediaType: img.mimeType,
+        url: img.uri,
+      })),
+      ...(userMessageContent ? [{ type: 'text', text: userMessageContent }] : [])
+    ];
+
+    // Construct message parts for AI SDK (using base64)
+    const aiMessageFiles = currentImages.map(img => ({
+      type: 'file' as const,
+      mediaType: img.mimeType || 'image/jpeg',
+      url: `data:${img.mimeType || 'image/jpeg'};base64,${img.base64}`,
+    }));
+
     const messageId = Math.random().toString(36).substring(7);
     const userMessage = {
       id: messageId,
       role: "user",
-      parts: [
-        {
-          type: "text",
-          text: userMessageContent,
-        }
-      ],
+      parts: dbMessageParts,
       createdAt: new Date(),
     };
 
@@ -198,7 +270,10 @@ export default function App() {
       });
 
       sendMessage(
-        { text: userMessageContent },
+        { 
+          text: userMessageContent,
+          files: aiMessageFiles.length > 0 ? aiMessageFiles : undefined
+        },
         {
           body: {
             sessionId: currentSessionId,
@@ -260,7 +335,18 @@ export default function App() {
                 return message.content || '';
               };
 
+              // Helper to extract images from parts
+              const getImages = (message: any) => {
+                if (message.parts) {
+                  return message.parts
+                    .filter((part: any) => part.type === 'file' && part.mediaType?.startsWith('image/'))
+                    .map((part: any) => ({ uri: part.url }));
+                }
+                return [];
+              };
+
               const messageContent = getTextContent(m);
+              const messageImages = getImages(m);
 
               return (
                 <View key={m.id}>
@@ -268,6 +354,7 @@ export default function App() {
                      <MessageRenderer
                        role="user"
                        content={messageContent}
+                       images={messageImages}
                      />
                   ) : (
                     <View>
@@ -295,18 +382,9 @@ export default function App() {
                        {/* Plugin Outputs - Custom UI Cards */}
                        {(() => {
                          const plugins = extractPluginOutputs(m);
-                        //  console.log('[Chatbot] 消息插件输出:', {
-                        //    messageId: m.id,
-                        //    messageRole: m.role,
-                        //    pluginCount: plugins.length,
-                        //    plugins: plugins,
-                        //  });
                          
                          return plugins.map((plugin) => {
-                           // console.log('[Chatbot] 处理插件:', plugin.toolName);
                            const Renderer = PLUGIN_RENDERERS[plugin.toolName];
-                           // console.log('[Chatbot] 找到渲染器:', !!Renderer, 'for', plugin.toolName);
-                           // console.log('[Chatbot] 可用渲染器:', Object.keys(PLUGIN_RENDERERS));
                            
                            return Renderer ? (
                              <Renderer
@@ -323,6 +401,7 @@ export default function App() {
                        <MessageRenderer
                          role="assistant"
                          content={messageContent}
+                         images={messageImages}
                        />
                     </View>
                   )}
@@ -342,24 +421,71 @@ export default function App() {
               borderTopColor: "#333",
             }}
           >
-            <TextInput
-              style={{
-                backgroundColor: "#27272a",
-                borderRadius: 20,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                fontSize: 16,
-                color: "#fff",
-              }}
-              placeholder={currentSessionId ? "Say something..." : "Create a new chat to start"}
-              placeholderTextColor="#666"
-              value={input}
-              onChangeText={setInput}
-              onSubmitEditing={handleSend}
-              returnKeyType="send"
-              blurOnSubmit={false}
-              editable={!!currentSessionId}
-            />
+            {selectedImages.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                {selectedImages.map((img, index) => (
+                  <View key={index} style={{ marginRight: 8, position: 'relative' }}>
+                    <Image
+                      source={{ uri: img.uri }}
+                      style={{ width: 60, height: 60, borderRadius: 8 }}
+                      contentFit="cover"
+                    />
+                    <TouchableOpacity
+                      onPress={() => removeImage(index)}
+                      style={{
+                        position: 'absolute',
+                        top: -6,
+                        right: -6,
+                        backgroundColor: '#333',
+                        borderRadius: 10,
+                        width: 20,
+                        height: 20,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderWidth: 1,
+                        borderColor: '#000',
+                      }}
+                    >
+                      <Ionicons name="close" size={12} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <TouchableOpacity
+                onPress={pickImage}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: '#27272a',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="camera-outline" size={24} color="#fff" />
+              </TouchableOpacity>
+              <TextInput
+                style={{
+                  flex: 1,
+                  backgroundColor: "#27272a",
+                  borderRadius: 20,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  fontSize: 16,
+                  color: "#fff",
+                }}
+                placeholder={currentSessionId ? "Say something..." : "Create a new chat to start"}
+                placeholderTextColor="#666"
+                value={input}
+                onChangeText={setInput}
+                onSubmitEditing={handleSend}
+                returnKeyType="send"
+                blurOnSubmit={false}
+                editable={!!currentSessionId}
+              />
+            </View>
           </View>
         </View>
         
