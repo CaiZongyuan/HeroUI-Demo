@@ -271,7 +271,7 @@ export default function App() {
                      />
                   ) : (
                     <View>
-                       {/* Active Thinking Card (Streaming) - NOW FIRST */}
+                       {/* Active Thinking Card (Streaming) */}
                        {showThinkingIndicator && (
                          (() => {
                            const activeInfo = extractActiveThinkingInfo(m);
@@ -287,7 +287,7 @@ export default function App() {
                          })()
                        )}
 
-                       {/* Thoughts Button (Finished) - NOW FIRST */}
+                       {/* Thoughts Button (Finished) */}
                        {!isStreaming && m.role === 'assistant' && hasThinkingLogs(m) && (
                          <ThoughtsButton onPress={() => handleShowLogs(m)} />
                        )}
@@ -319,7 +319,7 @@ export default function App() {
                          });
                        })()}
 
-                       {/* Render Text Content Only - NOW THIRD */}
+                       {/* Render Text Content Only */}
                        <MessageRenderer
                          role="assistant"
                          content={messageContent}
