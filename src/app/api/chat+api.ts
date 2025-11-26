@@ -1,53 +1,35 @@
+import { agentscope } from '@/src/providers/agentscope';
 import {
     convertToModelMessages,
-    stepCountIs,
     streamText,
-    tool,
-    UIMessage,
+    UIMessage
 } from 'ai';
-import { ollama } from 'ollama-ai-provider-v2';
-import { z } from 'zod';
 
 export async function POST(req: Request) {
-    const { messages }: { messages: UIMessage[] } = await req.json();
+    const { messages, userId, sessionId }: { messages: UIMessage[]; userId?: string; sessionId?: string } =
+        await req.json();
 
     const result = streamText({
-        model: ollama('qwen3-vl:8b'),
-        providerOptions: { ollama: { think: true } },
+        model: agentscope('agentscope-runtime'),
         messages: convertToModelMessages(messages),
-        stopWhen: stepCountIs(5),
-        tools: {
-            weather: tool({
-                description: 'Get the weather in a location (fahrenheit)',
-                inputSchema: z.object({
-                    location: z.string().describe('The location to get the weather for'),
-                }),
-                execute: async ({ location }) => {
-                    const temperature = Math.round(Math.random() * (90 - 32) + 32);
-                    return {
-                        location,
-                        temperature,
-                    };
-                },
-            }),
-            convertFahrenheitToCelsius: tool({
-                description: 'Convert a temperature in fahrenheit to celsius',
-                inputSchema: z.object({
-                    temperature: z
-                        .number()
-                        .describe('The temperature in fahrenheit to convert'),
-                }),
-                execute: async ({ temperature }) => {
-                    const celsius = Math.round((temperature - 32) * (5 / 9));
-                    return {
-                        celsius,
-                    };
-                },
-            }),
+        providerOptions: {
+            agentscope: {
+                userId: userId ?? 'wk-ios',
+                sessionId: sessionId ?? 'test01',
+            },
         },
     });
 
     return result.toUIMessageStreamResponse({
+        originalMessages: messages,
+        onFinish: ({ messages }) => {
+            console.log("messages: ", JSON.stringify(messages, (key, value) => {
+                if (typeof value === 'string' && value.length > 100) {
+                    return value.substring(0, 50) + `... [truncated, length: ${value.length}]`;
+                }
+                return value;
+            }, 2));
+        },
         headers: {
             'Content-Type': 'application/octet-stream',
             'Content-Encoding': 'none',

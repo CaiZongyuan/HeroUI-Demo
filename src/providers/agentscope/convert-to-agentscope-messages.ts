@@ -3,18 +3,18 @@ import { convertUint8ArrayToBase64 } from '@ai-sdk/provider-utils';
 
 export type AgentScopeContent =
   | {
-      type: 'text';
-      text: string;
-    }
+    type: 'text';
+    text: string;
+  }
   | {
-      type: 'image';
-      image_url: string;
-    }
+    type: 'image';
+    image_url: string;
+  }
   | {
-      type: 'file';
-      file_data: string;
-      filename?: string;
-    };
+    type: 'file';
+    file_data: string;
+    filename?: string;
+  };
 
 export interface AgentScopeMessagePayload {
   object?: 'message';
@@ -27,16 +27,32 @@ function toTextContent(text: string): AgentScopeContent {
   return { type: 'text', text };
 }
 
-function toFileContent(data: string | URL | Uint8Array): AgentScopeContent {
+function toFileContent(
+  data: string | URL | Uint8Array,
+  mimeType?: string,
+): AgentScopeContent {
   if (data instanceof Uint8Array) {
+    if (mimeType?.startsWith('image/')) {
+      return {
+        type: 'image',
+        image_url: `data:${mimeType};base64,${convertUint8ArrayToBase64(data)}`,
+      };
+    }
     return { type: 'file', file_data: convertUint8ArrayToBase64(data) };
   }
 
-  const url = typeof data === 'string' ? data : String(data);
+  let url = typeof data === 'string' ? data : String(data);
+
+  if (mimeType?.startsWith('image/') && !url.startsWith('data:') && !url.startsWith('http')) {
+    url = `data:${mimeType};base64,${url}`;
+  }
+
   return { type: 'image', image_url: url };
 }
 
-export function convertToAgentScopeMessages(prompt: LanguageModelV2Prompt): AgentScopeMessagePayload[] {
+export function convertToAgentScopeMessages(
+  prompt: LanguageModelV2Prompt,
+): AgentScopeMessagePayload[] {
   return prompt.map((message) => {
     switch (message.role) {
       case 'system': {
@@ -52,12 +68,14 @@ export function convertToAgentScopeMessages(prompt: LanguageModelV2Prompt): Agen
           LanguageModelV2Prompt[number],
           { role: 'user' }
         >;
-        const content = userMessage.content.map((part) => {
+        const content = (userMessage.content as any[]).map((part) => {
           switch (part.type) {
             case 'text':
               return toTextContent(part.text);
             case 'file':
-              return toFileContent(part.data);
+              return toFileContent(part.data, part.mimeType ?? part.mediaType);
+            case 'image':
+              return toFileContent(part.image, part.mimeType ?? part.mediaType);
             default:
               throw new InvalidArgumentError({
                 argument: 'prompt',
